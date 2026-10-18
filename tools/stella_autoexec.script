@@ -1,0 +1,254 @@
+breakIf {pc==f024 && _scanEnd!=#262 && _fCount>#2}
+breakIf {pc==f024 && *ec==#1 && !(*8b==#3)}
+breakIf {pc==f024 && *ec==#2 && !(*82==#1)}
+breakIf {pc==f024 && *ec==#3 && !(*90==#1)}
+breakIf {pc==f024 && *ec==#4 && !(*8f>#40 && *91==#0)}
+breakIf {pc==f024 && *ec==#5 && !(*91==#8)}
+breakIf {pc==f024 && *ec==#6 && !(*a6==#0)}
+breakIf {pc==f024 && *ec==#7 && !(*82==#7)}
+breakIf {pc==f024 && *ec==#8 && !(*83==#1)}
+breakIf {pc==f024 && *ec==#9 && !(*83==#0)}
+breakIf {pc==f024 && *ec==#10 && !(*82==#2)}
+breakIf {pc==f024 && *ec==#11 && !(*82==#1)}
+breakIf {pc==f024 && *ec==#12 && !(*82==#1 && *a5==#31)}
+breakIf {pc==f024 && *ec==#13 && !(*82==#1)}
+breakIf {pc==f024 && *ec==#14 && !(*83==#0)}
+breakIf {pc==f024 && *ec==#15 && !(*82==#0)}
+frame 60
+saveSnap
+swchb 3d
+frame 3
+swchb 3f
+frame 3
+swchb 3d
+frame 3
+swchb 3f
+frame 30
+ram ec 01
+frame 2
+ram ec 00
+saveSnap
+swchb 3d
+frame 3
+swchb 3f
+frame 3
+swchb 3d
+frame 3
+swchb 3f
+frame 3
+joy0Fire 0
+frame 3
+joy0Fire 1
+frame 3
+ram ec 02
+frame 2
+ram ec 00
+frame 240
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+ram 96 78
+ram 97 46
+ram 99 8c
+ram 9a 5f
+ram a6 01
+ram a7 04
+ram a8 28
+frame 1
+saveSnap
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+joy0Up 0
+frame 1
+joy0Up 1
+frame 2
+ram ec 03
+frame 2
+ram ec 00
+joy0Right 0
+frame 20
+joy0Right 1
+frame 1
+ram ec 04
+frame 2
+ram ec 00
+joy0Fire 0
+frame 4
+saveSnap
+joy0Fire 1
+frame 40
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+joy0Left 0
+frame 3
+joy0Left 1
+frame 1
+ram ec 05
+frame 2
+ram ec 00
+joy0Fire 0
+frame 3
+saveSnap
+joy0Fire 1
+frame 30
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+ram 90 01
+ram a6 01
+ram a7 01
+ram a8 1e
+frame 1
+joy0Fire 0
+frame 1
+joy0Fire 1
+frame 10
+ram ec 06
+frame 2
+ram ec 00
+ram a5 1f
+ram a6 02
+ram a7 02
+ram a8 11
+ram a9 c8
+ram 90 03
+ram 8f 28
+frame 2
+saveSnap
+ram 90 02
+frame 1
+saveSnap
+frame 1
+saveSnap
+ram ec 07
+frame 2
+ram ec 00
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+ram 96 5a
+ram 9b 00
+ram 90 00
+ram 8f 28
+joy0Right 0
+frame 1
+joy0Right 1
+joy0Fire 0
+frame 12
+saveSnap
+joy0Fire 1
+frame 30
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+ram a6 01
+ram a7 03
+ram a8 2d
+ram 97 64
+swchb 37
+frame 5
+saveSnap
+ram ec 08
+frame 2
+ram ec 00
+frame 30
+swchb 3f
+frame 5
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+ram ec 09
+frame 2
+ram ec 00
+ram a5 01
+ram 96 14
+ram 9b 00
+ram a6 00
+frame 120
+ram ec 0a
+frame 2
+ram ec 00
+saveSnap
+frame 150
+joy0Fire 0
+frame 3
+joy0Fire 1
+frame 3
+ram ec 0b
+frame 2
+ram ec 00
+swchb 3e
+frame 3
+swchb 3f
+frame 10
+ram ec 0c
+frame 2
+ram ec 00
+ram a5 1f
+ram a6 00
+ram a9 ff
+ram a0 ff
+ram a1 ff
+ram a2 ff
+ram a3 ff
+ram a4 ff
+swchb 7f
+frame 60
+swchb bf
+frame 60
+swchb ff
+frame 60
+swchb 3f
+frame 10
+ram ec 0d
+frame 2
+ram ec 00
+ram ec 0e
+frame 2
+ram ec 00
+swchb 3d
+frame 3
+swchb 3f
+frame 10
+ram ec 0f
+frame 2
+ram ec 00
+frame 30
+saveSnap
