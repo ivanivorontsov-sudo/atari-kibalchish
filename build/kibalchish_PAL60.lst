@@ -1,0 +1,1969 @@
+------- FILE kibalchish.asm LEVEL 1 PASS 2
+      1  fffe					      processor	6502
+------- FILE vcs.h LEVEL 2 PASS 2
+      0  10000 ????				       include	"vcs.h"
+      1  10000 ????						; VCS.H
+      2  10000 ????						; Version 1.07, 08/OCT/2021
+      3  10000 ????
+      4  10000 ????		00 6b	    VERSION_VCS =	107
+      5  10000 ????
+      6  10000 ????						; THIS IS *THE* "STANDARD" VCS.H
+      7  10000 ????						; THIS FILE IS EXPLICITLY SUPPORTED AS A DASM-PREFERRED COMPANION FILE
+      8  10000 ????						; The latest version can be found at https://dasm-assembler.github.io/
+      9  10000 ????						;
+     10  10000 ????						; This file defines hardware registers and memory mapping for the
+     11  10000 ????						; Atari 2600. It is distributed as a companion machine-specific support package
+     12  10000 ????						; for the DASM compiler. Updates to this file, DASM, and associated tools are
+     13  10000 ????						; available at at https://dasm-assembler.github.io/
+     14  10000 ????						;
+     15  10000 ????						; Many thanks to the people who have contributed. If you find an issue with the
+     16  10000 ????						; contents, or would like to add something, please report as an issue at...
+     17  10000 ????						; https://github.com/dasm-assembler/dasm/issues
+     18  10000 ????
+     19  10000 ????						;
+     20  10000 ????						; Latest Revisions...
+     21  10000 ????						; 1.07  08/OCT/2021	 Added timer interrupt registers
+     22  10000 ????						; 1.06  05/SEP/2020	 Modified header/license and links to new versions
+     23  10000 ????						; 1.05  13/NOV/2003	  - Correction to 1.04 - now functions as requested by MR.
+     24  10000 ????						;			  - Added VERSION_VCS equate (which will reflect 100x version #)
+     25  10000 ????						;			    This will allow conditional code to verify VCS.H being
+     26  10000 ????						;			    used for code assembly.
+     27  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
+     28  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
+     29  10000 ????						;			 mirrored reading/writing differences.	This is more a
+     30  10000 ????						;			 readability issue, and binary compatibility with disassembled
+     31  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
+     32  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
+     33  10000 ????						;			 which was broken by the use of segments in this file, as
+     34  10000 ????						;			 reported by Manuel Polik on [stella] 11/MAY/2003
+     35  10000 ????						; 1.02  22/MAR/2003	 Added TIMINT($285)
+     36  10000 ????						; 1.01 		 Constant offset added to allow use for 3F-style bankswitching
+     37  10000 ????						;			  - define TIA_BASE_ADDRESS as $40 for Tigervision carts, otherwise
+     38  10000 ????						;			    it is safe to leave it undefined, and the base address will
+     39  10000 ????						;			    be set to 0.  Thanks to Eckhard Stolberg for the suggestion.
+     40  10000 ????						;			    Note, may use -DLABEL=EXPRESSION to define TIA_BASE_ADDRESS
+     41  10000 ????						;			  - register definitions are now generated through assignment
+     42  10000 ????						;			    in uninitialised segments.	This allows a changeable base
+     43  10000 ????						;			    address architecture.
+     44  10000 ????						; 1.0	 22/MAR/2003	 Initial release
+     45  10000 ????
+     46  10000 ????
+     47  10000 ????						;-------------------------------------------------------------------------------
+     48  10000 ????
+     49  10000 ????						; TIA_BASE_ADDRESS
+     50  10000 ????						; The TIA_BASE_ADDRESS defines the base address of access to TIA registers.
+     51  10000 ????						; Normally 0, the base address should (externally, before including this file)
+     52  10000 ????						; be set to $40 when creating 3F-bankswitched (and other?) cartridges.
+     53  10000 ????						; The reason is that this bankswitching scheme treats any access to locations
+     54  10000 ????						; < $40 as a bankswitch.
+     55  10000 ????
+     56  10000 ????			   -	       IFNCONST	TIA_BASE_ADDRESS
+     57  10000 ????			   -TIA_BASE_ADDRESS =	0
+     58  10000 ????				       ENDIF
+     59  10000 ????
+     60  10000 ????						; Note: The address may be defined on the command-line using the -D switch, eg:
+     61  10000 ????						; dasm.exe code.asm -DTIA_BASE_ADDRESS=$40 -f3 -v5 -ocode.bin
+     62  10000 ????						; *OR* by declaring the label before including this file, eg:
+     63  10000 ????						; TIA_BASE_ADDRESS = $40
+     64  10000 ????						;   include "vcs.h"
+     65  10000 ????
+     66  10000 ????						; Alternate read/write address capability - allows for some disassembly compatibility
+     67  10000 ????						; usage ; to allow reassembly to binary perfect copies).  This is essentially catering
+     68  10000 ????						; for the mirrored ROM hardware registers.
+     69  10000 ????
+     70  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
+     71  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined,
+     72  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
+     73  10000 ????
+     74  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
+     75  10000 ????			   -TIA_BASE_READ_ADDRESS =	TIA_BASE_ADDRESS
+     76  10000 ????				       ENDIF
+     77  10000 ????
+     78  10000 ????			   -	       IFNCONST	TIA_BASE_WRITE_ADDRESS
+     79  10000 ????			   -TIA_BASE_WRITE_ADDRESS =	TIA_BASE_ADDRESS
+     80  10000 ????				       ENDIF
+     81  10000 ????
+     82  10000 ????						;-------------------------------------------------------------------------------
+     83  10000 ????
+     84 U002d ????				      SEG.U	TIA_REGISTERS_WRITE
+     85 U0000					      ORG	TIA_BASE_WRITE_ADDRESS
+     86 U0000
+     87 U0000							; DO NOT CHANGE THE RELATIVE ORDERING OF REGISTERS!
+     88 U0000
+     89 U0000		       00	   VSYNC      ds	1	; $00	 0000 00x0   Vertical Sync Set-Clear
+     90 U0001		       00	   VBLANK     ds	1	; $01	 xx00 00x0   Vertical Blank Set-Clear
+     91 U0002		       00	   WSYNC      ds	1	; $02	 ---- ----   Wait for Horizontal Blank
+     92 U0003		       00	   RSYNC      ds	1	; $03	 ---- ----   Reset Horizontal Sync Counter
+     93 U0004		       00	   NUSIZ0     ds	1	; $04	 00xx 0xxx   Number-Size player/missile 0
+     94 U0005		       00	   NUSIZ1     ds	1	; $05	 00xx 0xxx   Number-Size player/missile 1
+     95 U0006		       00	   COLUP0     ds	1	; $06	 xxxx xxx0   Color-Luminance Player 0
+     96 U0007		       00	   COLUP1     ds	1	; $07	 xxxx xxx0   Color-Luminance Player 1
+     97 U0008		       00	   COLUPF     ds	1	; $08	 xxxx xxx0   Color-Luminance Playfield
+     98 U0009		       00	   COLUBK     ds	1	; $09	 xxxx xxx0   Color-Luminance Background
+     99 U000a		       00	   CTRLPF     ds	1	; $0A	 00xx 0xxx   Control Playfield, Ball, Collisions
+    100 U000b		       00	   REFP0      ds	1	; $0B	 0000 x000   Reflection Player 0
+    101 U000c		       00	   REFP1      ds	1	; $0C	 0000 x000   Reflection Player 1
+    102 U000d		       00	   PF0	      ds	1	; $0D	 xxxx 0000   Playfield Register Byte 0
+    103 U000e		       00	   PF1	      ds	1	; $0E	 xxxx xxxx   Playfield Register Byte 1
+    104 U000f		       00	   PF2	      ds	1	; $0F	 xxxx xxxx   Playfield Register Byte 2
+    105 U0010		       00	   RESP0      ds	1	; $10	 ---- ----   Reset Player 0
+    106 U0011		       00	   RESP1      ds	1	; $11	 ---- ----   Reset Player 1
+    107 U0012		       00	   RESM0      ds	1	; $12	 ---- ----   Reset Missile 0
+    108 U0013		       00	   RESM1      ds	1	; $13	 ---- ----   Reset Missile 1
+    109 U0014		       00	   RESBL      ds	1	; $14	 ---- ----   Reset Ball
+    110 U0015		       00	   AUDC0      ds	1	; $15	 0000 xxxx   Audio Control 0
+    111 U0016		       00	   AUDC1      ds	1	; $16	 0000 xxxx   Audio Control 1
+    112 U0017		       00	   AUDF0      ds	1	; $17	 000x xxxx   Audio Frequency 0
+    113 U0018		       00	   AUDF1      ds	1	; $18	 000x xxxx   Audio Frequency 1
+    114 U0019		       00	   AUDV0      ds	1	; $19	 0000 xxxx   Audio Volume 0
+    115 U001a		       00	   AUDV1      ds	1	; $1A	 0000 xxxx   Audio Volume 1
+    116 U001b		       00	   GRP0       ds	1	; $1B	 xxxx xxxx   Graphics Register Player 0
+    117 U001c		       00	   GRP1       ds	1	; $1C	 xxxx xxxx   Graphics Register Player 1
+    118 U001d		       00	   ENAM0      ds	1	; $1D	 0000 00x0   Graphics Enable Missile 0
+    119 U001e		       00	   ENAM1      ds	1	; $1E	 0000 00x0   Graphics Enable Missile 1
+    120 U001f		       00	   ENABL      ds	1	; $1F	 0000 00x0   Graphics Enable Ball
+    121 U0020		       00	   HMP0       ds	1	; $20	 xxxx 0000   Horizontal Motion Player 0
+    122 U0021		       00	   HMP1       ds	1	; $21	 xxxx 0000   Horizontal Motion Player 1
+    123 U0022		       00	   HMM0       ds	1	; $22	 xxxx 0000   Horizontal Motion Missile 0
+    124 U0023		       00	   HMM1       ds	1	; $23	 xxxx 0000   Horizontal Motion Missile 1
+    125 U0024		       00	   HMBL       ds	1	; $24	 xxxx 0000   Horizontal Motion Ball
+    126 U0025		       00	   VDELP0     ds	1	; $25	 0000 000x   Vertical Delay Player 0
+    127 U0026		       00	   VDELP1     ds	1	; $26	 0000 000x   Vertical Delay Player 1
+    128 U0027		       00	   VDELBL     ds	1	; $27	 0000 000x   Vertical Delay Ball
+    129 U0028		       00	   RESMP0     ds	1	; $28	 0000 00x0   Reset Missile 0 to Player 0
+    130 U0029		       00	   RESMP1     ds	1	; $29	 0000 00x0   Reset Missile 1 to Player 1
+    131 U002a		       00	   HMOVE      ds	1	; $2A	 ---- ----   Apply Horizontal Motion
+    132 U002b		       00	   HMCLR      ds	1	; $2B	 ---- ----   Clear Horizontal Move Registers
+    133 U002c		       00	   CXCLR      ds	1	; $2C	 ---- ----   Clear Collision Latches
+    134 U002d
+    135 U002d							;-------------------------------------------------------------------------------
+    136 U002d
+    137 U000e ????				      SEG.U	TIA_REGISTERS_READ
+    138 U0000					      ORG	TIA_BASE_READ_ADDRESS
+    139 U0000
+    140 U0000							;					     bit 7   bit 6
+    141 U0000		       00	   CXM0P      ds	1	; $00	     xx00 0000	     Read Collision  M0-P1   M0-P0
+    142 U0001		       00	   CXM1P      ds	1	; $01	     xx00 0000			     M1-P0   M1-P1
+    143 U0002		       00	   CXP0FB     ds	1	; $02	     xx00 0000			     P0-PF   P0-BL
+    144 U0003		       00	   CXP1FB     ds	1	; $03	     xx00 0000			     P1-PF   P1-BL
+    145 U0004		       00	   CXM0FB     ds	1	; $04	     xx00 0000			     M0-PF   M0-BL
+    146 U0005		       00	   CXM1FB     ds	1	; $05	     xx00 0000			     M1-PF   M1-BL
+    147 U0006		       00	   CXBLPF     ds	1	; $06	     x000 0000			     BL-PF   -----
+    148 U0007		       00	   CXPPMM     ds	1	; $07	     xx00 0000			     P0-P1   M0-M1
+    149 U0008		       00	   INPT0      ds	1	; $08	     x000 0000	     Read Pot Port 0
+    150 U0009		       00	   INPT1      ds	1	; $09	     x000 0000	     Read Pot Port 1
+    151 U000a		       00	   INPT2      ds	1	; $0A	     x000 0000	     Read Pot Port 2
+    152 U000b		       00	   INPT3      ds	1	; $0B	     x000 0000	     Read Pot Port 3
+    153 U000c		       00	   INPT4      ds	1	; $0C	     x000 0000	     Read Input (Trigger) 0
+    154 U000d		       00	   INPT5      ds	1	; $0D	     x000 0000	     Read Input (Trigger) 1
+    155 U000e
+    156 U000e							;-------------------------------------------------------------------------------
+    157 U000e
+    158 U02a0 ????				      SEG.U	RIOT
+    159 U0280					      ORG	$280
+    160 U0280
+    161 U0280							; RIOT MEMORY MAP
+    162 U0280
+    163 U0280		       00	   SWCHA      ds	1	; $280      Port A data register for joysticks:
+    164 U0281							;	     Bits 4-7 for player 1.  Bits 0-3 for player 2.
+    165 U0281
+    166 U0281		       00	   SWACNT     ds	1	; $281      Port A data direction register (DDR)
+    167 U0282		       00	   SWCHB      ds	1	; $282      Port B data (console switches)
+    168 U0283		       00	   SWBCNT     ds	1	; $283      Port B DDR
+    169 U0284		       00	   INTIM      ds	1	; $284      Timer output (and disable timer interrupt)
+    170 U0285
+    171 U0285		       00	   TIMINT     ds	1	; $285      Read the interrupt flags
+    172 U0286
+    173 U0286							; Mirrored registers, part 1 ($285-$294)
+    174 U0286
+    175 U0286		       00		      ds	1	; $286      Mirror of INTIM
+    176 U0287		       00		      ds	1	; $287      Mirror of TIMINT
+    177 U0288		       00		      ds	1	; $288      Mirror of SWCHA
+    178 U0289		       00		      ds	1	; $289      Mirror of SWACNT
+    179 U028a		       00		      ds	1	; $28A      Mirror of SWCHB
+    180 U028b		       00		      ds	1	; $28B      Mirror of SWBCNT
+    181 U028c		       00		      ds	1	; $28C      Timer output (and enable timer interrupt)
+    182 U028d		       00		      ds	1	; $28D      Mirror of TIMINT
+    183 U028e		       00		      ds	1	; $28E      Mirror of $28C
+    184 U028f		       00		      ds	1	; $28F      Mirror of TIMINT
+    185 U0290		       00		      ds	1	; $290      Mirror of SWCHA
+    186 U0291		       00		      ds	1	; $291      Mirror of SWACNT
+    187 U0292		       00		      ds	1	; $292      Mirror of SWCHB
+    188 U0293		       00		      ds	1	; $293      Mirror of SWBCNT
+    189 U0294
+    190 U0294		       00	   TIM1T      ds	1	; $294      set 1 clock interval (and disable timer interrupt)
+    191 U0295		       00	   TIM8T      ds	1	; $295      set 8 clock interval (and disable timer interrupt)
+    192 U0296		       00	   TIM64T     ds	1	; $296      set 64 clock interval (and disable timer interrupt)
+    193 U0297		       00	   T1024T     ds	1	; $297      set 1024 clock interval (and disable timer interrupt)
+    194 U0298
+    195 U0298							; Mirrored registers, part 2 ($298-$29b)
+    196 U0298
+    197 U0298		       00		      ds	1	; $298      Mirror of SWCHA
+    198 U0299		       00		      ds	1	; $299      Mirror of SWACNT
+    199 U029a		       00		      ds	1	; $29A      Mirror of SWCHB
+    200 U029b		       00		      ds	1	; $29B      Mirror of SWBCNT
+    201 U029c
+    202 U029c		       00	   TIM1I      ds	1	; $29C      set 1 clock interval (and enable timer interrupt)
+    203 U029d		       00	   TIM8I      ds	1	; $29D      set 8 clock interval (and enable timer interrupt)
+    204 U029e		       00	   TIM64I     ds	1	; $29E      set 64 clock interval (and enable timer interrupt)
+    205 U029f		       00	   T1024I     ds	1	; $29F      set 1024 clock interval (and enable timer interrupt)
+    206 U02a0
+    207 U02a0
+    208 U02a0							;-------------------------------------------------------------------------------
+    209 U02a0							; The following required for back-compatibility with code which does not use
+    210 U02a0							; segments.
+    211 U02a0
+    212  0000 ????				      SEG
+    213  0000 ????
+    214  0000 ????						; EOF
+------- FILE kibalchish.asm
+      3  0000 ????	       00 01	   NO_ILLEGAL_OPCODES =	1
+------- FILE macro.h LEVEL 2 PASS 2
+      0  0000 ????				      include	"macro.h"
+      1  0000 ????						; MACRO.H
+      2  0000 ????						; Version 1.11, 01/FEB/2026
+      3  0000 ????
+      4  0000 ????	       00 6f	   VERSION_MACRO =	111
+      5  0000 ????
+      6  0000 ????						;
+      7  0000 ????						; THIS FILE IS EXPLICITLY SUPPORTED AS A DASM-PREFERRED COMPANION FILE
+      8  0000 ????						; The latest version can be found at https://dasm-assembler.github.io/
+      9  0000 ????						;
+     10  0000 ????						; This file defines DASM macros useful for development for the Atari 2600.
+     11  0000 ????						; It is distributed as a companion machine-specific support package
+     12  0000 ????						; for the DASM compiler.
+     13  0000 ????						;
+     14  0000 ????						; Many thanks to the people who have contributed. If you find an issue with the
+     15  0000 ????						; contents, or would like ot add something, please report as an issue at...
+     16  0000 ????						; https://github.com/dasm-assembler/dasm/issues
+     17  0000 ????
+     18  0000 ????
+     19  0000 ????						; Latest Revisions...
+     20  0000 ????						; 1.11  01/FEB/2026	 - added macros ALIGN_PAGE, BYTE_COUNT, CHECK_PAGE, TIMER_SETUP
+     21  0000 ????						;			   and TIMER_WAIT
+     22  0000 ????						; 1.10  09/MAY/2022	 - ("nop 0") should be changed to "nop VSYNC", to ensure that
+     23  0000 ????						;			   the instruction will access a "safe" memory location even
+     24  0000 ????						;			   when a different TIA_BASE_ADDRESS is defined - ale_79
+     25  0000 ????						; 1.09  05/SEP/2020	 - updated license/links
+     26  0000 ????						; 1.08  13/JUL/2020	 - added use of LXA to CLEAN_START
+     27  0000 ????						; 1.07  19/JAN/2020	 - correction to comment VERTICAL_SYNC
+     28  0000 ????						; 1.06  03/SEP/2004	 - nice revision of VERTICAL_SYNC (Edwin Blink)
+     29  0000 ????						; 1.05  14/NOV/2003	 - Added VERSION_MACRO equate (which will reflect 100x version #)
+     30  0000 ????						;			   This will allow conditional code to verify MACRO.H being
+     31  0000 ????						;			   used for code assembly.
+     32  0000 ????						; 1.04  13/NOV/2003	 - SET_POINTER macro added (16-bit address load)
+     33  0000 ????						;
+     34  0000 ????						; 1.03  23/JUN/2003	 - CLEAN_START macro added - clears TIA, RAM, registers
+     35  0000 ????						;
+     36  0000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
+     37  0000 ????						;			   (standardised macro for vertical synch code)
+     38  0000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added.
+     39  0000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
+     40  0000 ????						; 1.0	22/MAR/2003		Initial release
+     41  0000 ????
+     42  0000 ????						; Note: Some of these macros use illegal opcodes.  To disable illegal opcode usage,
+     43  0000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
+     44  0000 ????						;   If you do not allow illegal opcode usage, you must include this file
+     45  0000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
+     46  0000 ????						;   registers and require them to be defined first).
+     47  0000 ????
+     48  0000 ????						; Available macros...
+     49  0000 ????						;   SLEEP n		 - sleep for n cycles
+     50  0000 ????						;   VERTICAL_SYNC	 - correct 3 scanline vertical synch code
+     51  0000 ????						;   CLEAN_START	 - set machine to known state on startup
+     52  0000 ????						;   SET_POINTER	 - load a 16-bit absolute to a 16-bit variable
+     53  0000 ????						;   BOUNDARY byte#	 - pad to byte # in page and count free bytes
+     54  0000 ????						;   ALIGN_PAGE 	 - align code to 256-byte page boundary and report free space
+     55  0000 ????						;   BYTE_COUNT 	 - report number of bytes used by a section
+     56  0000 ????						;   CHECK_PAGE 	 - verify code/data hasn't crossed a page boundary
+     57  0000 ????						;   TIMER_SETUP n	 - setup a timer for n scanlines
+     58  0000 ????						;   TIMER_WAIT 	 - wait for the timer to expire
+     59  0000 ????
+     60  0000 ????						;-------------------------------------------------------------------------------
+     61  0000 ????						; SLEEP duration
+     62  0000 ????						; Original author: Thomas Jentzsch
+     63  0000 ????						; Inserts code which takes the specified number of cycles to execute.	This is
+     64  0000 ????						; useful for code where precise timing is required.
+     65  0000 ????						; ILLEGAL-OPCODE VERSION DOES NOT AFFECT FLAGS OR REGISTERS.
+     66  0000 ????						; LEGAL OPCODE VERSION MAY AFFECT FLAGS
+     67  0000 ????						; Uses illegal opcode (DASM 2.20.01 onwards).
+     68  0000 ????
+     69  0000 ????				      MAC	sleep
+     70  0000 ????			   .CYCLES    SET	{1}
+     71  0000 ????
+     72  0000 ????				      IF	.CYCLES < 2
+     73  0000 ????				      ECHO	"MACRO ERROR: 'SLEEP': Duration must be > 1"
+     74  0000 ????				      ERR
+     75  0000 ????				      ENDIF
+     76  0000 ????
+     77  0000 ????				      IF	.CYCLES & 1
+     78  0000 ????				      IFNCONST	NO_ILLEGAL_OPCODES
+     79  0000 ????				      nop	VSYNC
+     80  0000 ????				      ELSE
+     81  0000 ????				      bit	VSYNC
+     82  0000 ????				      ENDIF
+     83  0000 ????			   .CYCLES    SET	.CYCLES - 3
+     84  0000 ????				      ENDIF
+     85  0000 ????
+     86  0000 ????				      REPEAT	.CYCLES / 2
+     87  0000 ????				      nop
+     88  0000 ????				      REPEND
+     89  0000 ????				      ENDM		;usage: SLEEP n (n>1)
+     90  0000 ????
+     91  0000 ????						;-------------------------------------------------------------------------------
+     92  0000 ????						; VERTICAL_SYNC
+     93  0000 ????						; revised version by Edwin Blink -- saves bytes!
+     94  0000 ????						; Inserts the code required for a proper 3 scanline vertical sync sequence
+     95  0000 ????						; Note: Alters the accumulator
+     96  0000 ????
+     97  0000 ????						; OUT: A = 0
+     98  0000 ????
+     99  0000 ????				      MAC	vertical_sync
+    100  0000 ????				      lda	#%1110	; each '1' bits generate a VSYNC ON line (bits 1..3)
+    101  0000 ????			   .VSLP1     sta	WSYNC	; 1st '0' bit resets Vsync, 2nd '0' bit exit loop
+    102  0000 ????				      sta	VSYNC
+    103  0000 ????				      lsr
+    104  0000 ????				      bne	.VSLP1	; branch until VSYNC has been reset
+    105  0000 ????				      ENDM
+    106  0000 ????
+    107  0000 ????						;-------------------------------------------------------------------------------
+    108  0000 ????						; CLEAN_START
+    109  0000 ????						; Original author: Andrew Davie
+    110  0000 ????						; Standardised start-up code, clears stack, all TIA registers and RAM to 0
+    111  0000 ????						; Sets stack pointer to $FF, and all registers to 0
+    112  0000 ????						; Sets decimal mode off, sets interrupt flag (kind of un-necessary)
+    113  0000 ????						; Use as very first section of code on boot (ie: at reset)
+    114  0000 ????						; Code written to minimise total ROM usage - uses weird 6502 knowledge :)
+    115  0000 ????
+    116  0000 ????				      MAC	clean_start
+    117  0000 ????				      sei
+    118  0000 ????				      cld
+    119  0000 ????
+    120  0000 ????				      IFNCONST	NO_ILLEGAL_OPCODES
+    121  0000 ????				      lxa	#0
+    122  0000 ????				      ELSE
+    123  0000 ????				      ldx	#0
+    124  0000 ????				      txa
+    125  0000 ????				      ENDIF
+    126  0000 ????				      tay
+    127  0000 ????			   .CLEAR_STACK dex
+    128  0000 ????				      txs
+    129  0000 ????				      pha
+    130  0000 ????				      bne	.CLEAR_STACK	; SP=$FF, X = A = Y = 0
+    131  0000 ????
+    132  0000 ????				      ENDM
+    133  0000 ????
+    134  0000 ????						;-------------------------------------------------------
+    135  0000 ????						; SET_POINTER
+    136  0000 ????						; Original author: Manuel Rotschkar
+    137  0000 ????						;
+    138  0000 ????						; Sets a 2 byte RAM pointer to an absolute address.
+    139  0000 ????						;
+    140  0000 ????						; Usage: SET_POINTER pointer, address
+    141  0000 ????						; Example: SET_POINTER SpritePTR, SpriteData
+    142  0000 ????						;
+    143  0000 ????						; Note: Alters the accumulator, NZ flags
+    144  0000 ????						; IN 1: 2 byte RAM location reserved for pointer
+    145  0000 ????						; IN 2: absolute address
+    146  0000 ????
+    147  0000 ????				      MAC	set_pointer
+    148  0000 ????			   .POINTER   SET	{1}
+    149  0000 ????			   .ADDRESS   SET	{2}
+    150  0000 ????
+    151  0000 ????				      LDA	#<.ADDRESS	; Get Lowbyte of Address
+    152  0000 ????				      STA	.POINTER	; Store in pointer
+    153  0000 ????				      LDA	#>.ADDRESS	; Get Hibyte of Address
+    154  0000 ????				      STA	.POINTER+1	; Store in pointer+1
+    155  0000 ????
+    156  0000 ????				      ENDM
+    157  0000 ????
+    158  0000 ????						;-------------------------------------------------------
+    159  0000 ????						; BOUNDARY byte#
+    160  0000 ????						; Original author: Denis Debro (borrowed from Bob Smith / Thomas)
+    161  0000 ????						;
+    162  0000 ????						; Push data to a certain position inside a page and keep count of how
+    163  0000 ????						; many free bytes the programmer will have.
+    164  0000 ????						;
+    165  0000 ????						; eg: BOUNDARY 5    ; position at byte #5 in page
+    166  0000 ????
+    167  0000 ????			   .FREE_BYTES SET	0
+    168  0000 ????				      MAC	boundary
+    169  0000 ????				      REPEAT	256
+    170  0000 ????				      IF	<. % {1} = 0
+    171  0000 ????				      MEXIT
+    172  0000 ????				      ELSE
+    173  0000 ????			   .FREE_BYTES SET	.FREE_BYTES + 1
+    174  0000 ????				      .byte	$00
+    175  0000 ????				      ENDIF
+    176  0000 ????				      REPEND
+    177  0000 ????				      ENDM
+    178  0000 ????
+    179  0000 ????						;-------------------------------------------------------
+    180  0000 ????						; ALIGN_PAGE
+    181  0000 ????						; Aligns code to a 256-byte page boundary and reports free space.
+    182  0000 ????						; Useful for ensuring data tables don't cross page boundaries, which
+    183  0000 ????						; can cause timing issues on the 6502.
+    184  0000 ????						;
+    185  0000 ????						; Usage: ALIGN_PAGE description
+    186  0000 ????						; Example: ALIGN_PAGE "Sprite Data"
+    187  0000 ????						;
+    188  0000 ????						; Note: Echoes the number of free bytes before the specified section
+    189  0000 ????
+    190  0000 ????				      MAC	align_page
+    191  0000 ????			   .Align
+    192  0000 ????				      align	256
+    193  0000 ????				      ECHO	"###", [* - .Align]d, "bytes free before", {1}
+    194  0000 ????				      ENDM
+    195  0000 ????
+    196  0000 ????						;-------------------------------------------------------
+    197  0000 ????						; BYTE_COUNT
+    198  0000 ????						; Reports the number of bytes used by a section of code or data.
+    199  0000 ????						; Useful for tracking ROM usage and optimizing code size.
+    200  0000 ????						;
+    201  0000 ????						; Usage: BYTE_COUNT start_label, "description"
+    202  0000 ????						; Example: BYTE_COUNT SpriteStart, "Sprite Graphics"
+    203  0000 ????						;
+    204  0000 ????						; IN 1: Label marking the start position
+    205  0000 ????						; IN 2: Description string for the section
+    206  0000 ????
+    207  0000 ????				      MAC	byte_count
+    208  0000 ????				      ECHO	">>>", {2}, ":", [* - {1}]d, "bytes"
+    209  0000 ????				      ENDM
+    210  0000 ????
+    211  0000 ????						;-------------------------------------------------------
+    212  0000 ????						; CHECK_PAGE
+    213  0000 ????						; Verifies that code/data hasn't crossed a page boundary.
+    214  0000 ????						; Generates an assembly error if the boundary was crossed.
+    215  0000 ????						; Critical for 6502 code where page crossing can affect timing
+    216  0000 ????						; or cause indirect addressing issues.
+    217  0000 ????						;
+    218  0000 ????						; Usage: CHECK_PAGE position, "description"
+    219  0000 ????						; Example: CHECK_PAGE TableStart, "Jump Table"
+    220  0000 ????						;
+    221  0000 ????						; IN 1: Starting position to check against
+    222  0000 ????						; IN 2: Description string for error message
+    223  0000 ????
+    224  0000 ????				      MAC	check_page
+    225  0000 ????			   .PREV_POS  SET	. - 1
+    226  0000 ????				      IF	>.PREV_POS != >{1}
+    227  0000 ????				      ECHO	""
+    228  0000 ????				      ECHO	"ERROR:", {2}, "crosses page"
+    229  0000 ????				      ECHO	""
+    230  0000 ????				      ERR
+    231  0000 ????				      ENDIF
+    232  0000 ????				      ENDM
+    233  0000 ????
+    234  0000 ????						;-------------------------------------------------------
+    235  0000 ????						; Usage: TIMER_SETUP lines
+    236  0000 ????						; where lines is the number of scanlines to skip (> 2).
+    237  0000 ????						; The timer will be set so that it expires before this number
+    238  0000 ????						; of scanlines. A WSYNC will be done first.
+    239  0000 ????
+    240  0000 ????				      MAC	timer_setup
+    241  0000 ????			   .lines     SET	{1}
+    242  0000 ????			   .cycles    SET	((.lines * 76) - 13)
+    243  0000 ????						; special case for when we have two timer events in a line
+    244  0000 ????						; and our 2nd event straddles the WSYNC boundary
+    245  0000 ????				      if	(.cycles % 64) < 12
+    246  0000 ????				      lda	#(.cycles / 64) - 1
+    247  0000 ????				      sta	WSYNC
+    248  0000 ????				      else
+    249  0000 ????				      lda	#(.cycles / 64)
+    250  0000 ????				      sta	WSYNC
+    251  0000 ????				      endif
+    252  0000 ????				      sta	TIM64T
+    253  0000 ????				      ENDM
+    254  0000 ????
+    255  0000 ????						;-------------------------------------------------------
+    256  0000 ????						; Use with TIMER_SETUP to wait for timer to complete.
+    257  0000 ????						; Performs a WSYNC afterwards.
+    258  0000 ????
+    259  0000 ????				      MAC	timer_wait
+    260  0000 ????			   .waittimer
+    261  0000 ????				      lda	INTIM
+    262  0000 ????				      bne	.waittimer
+    263  0000 ????				      sta	WSYNC
+    264  0000 ????				      ENDM
+    265  0000 ????
+    266  0000 ????						; EOF
+------- FILE kibalchish.asm
+      5  0000 ????
+      6  0000 ????			  -	      IFNCONST	TV
+      7  0000 ????			  -TV	      =	0
+      8  0000 ????				      ENDIF
+      9  0000 ????			  -	      IFNCONST	NOPAUSE
+     10  0000 ????			  -NOPAUSE    =	0
+     11  0000 ????				      ENDIF
+     12  0000 ????			  -	      IF	TV = 1 || TV = 3
+     13  0000 ????			  -HZ50       =	1
+     14  0000 ????			  -FPSN       =	5
+     15  0000 ????			  -VBT	      =	57
+     16  0000 ????			  -OST	      =	43
+     17  0000 ????			  -PADL       =	18
+     18  0000 ????			  -SHOTSPD    =	5
+     19  0000 ????			  -LREP       =	8
+     20  0000 ????			  -PLWALK     =	77
+     21  0000 ????			  -DIFFADD    =	24
+     22  0000 ????				      ELSE
+     23  0000 ????	       00 00	   HZ50       =	0
+     24  0000 ????	       00 06	   FPSN       =	6
+     25  0000 ????	       00 2c	   VBT	      =	44
+     26  0000 ????	       00 24	   OST	      =	36
+     27  0000 ????	       00 00	   PADL       =	0
+     28  0000 ????	       00 04	   SHOTSPD    =	4
+     29  0000 ????	       00 0a	   LREP       =	10
+     30  0000 ????	       00 40	   PLWALK     =	64
+     31  0000 ????	       00 28	   DIFFADD    =	40
+     32  0000 ????				      ENDIF
+     33  0000 ????			  -	      IF	TV = 0
+     34  0000 ????			  -C_STAR     =	$44
+     35  0000 ????			  -C_STAR2    =	$46
+     36  0000 ????			  -C_JAR      =	$58
+     37  0000 ????			  -C_JARF     =	$5E
+     38  0000 ????			  -C_DOL      =	$1E
+     39  0000 ????			  -C_BOOM     =	$36
+     40  0000 ????			  -C_HOUSE    =	$F6
+     41  0000 ????			  -C_FIELD    =	$C4
+     42  0000 ????			  -C_GOF      =	$42
+     43  0000 ????			  -C_WHITE    =	$0E
+     44  0000 ????			  -C_TBG      =	$82
+     45  0000 ????				      ENDIF
+     46  0000 ????				      IF	TV = 1 || TV = 2
+     47  0000 ????	       00 64	   C_STAR     =	$64
+     48  0000 ????	       00 66	   C_STAR2    =	$66
+     49  0000 ????	       00 86	   C_JAR      =	$86
+     50  0000 ????	       00 8a	   C_JARF     =	$8A
+     51  0000 ????	       00 2c	   C_DOL      =	$2C
+     52  0000 ????	       00 46	   C_BOOM     =	$46
+     53  0000 ????	       00 28	   C_HOUSE    =	$28
+     54  0000 ????	       00 54	   C_FIELD    =	$54
+     55  0000 ????	       00 62	   C_GOF      =	$62
+     56  0000 ????	       00 0e	   C_WHITE    =	$0E
+     57  0000 ????	       00 d2	   C_TBG      =	$D2
+     58  0000 ????				      ENDIF
+     59  0000 ????			  -	      IF	TV = 3
+     60  0000 ????			  -C_STAR     =	$04
+     61  0000 ????			  -C_STAR2    =	$04
+     62  0000 ????			  -C_JAR      =	$06
+     63  0000 ????			  -C_JARF     =	$0E
+     64  0000 ????			  -C_DOL      =	$0C
+     65  0000 ????			  -C_BOOM     =	$0E
+     66  0000 ????			  -C_HOUSE    =	$0A
+     67  0000 ????			  -C_FIELD    =	$08
+     68  0000 ????			  -C_GOF      =	$04
+     69  0000 ????			  -C_WHITE    =	$0E
+     70  0000 ????			  -C_TBG      =	$02
+     71  0000 ????				      ENDIF
+     72  0000 ????
+     73  0000 ????	       00 00	   ST_TITLE   =	0
+     74  0000 ????	       00 01	   ST_PLAY    =	1
+     75  0000 ????	       00 02	   ST_OVER    =	2
+     76  0000 ????
+     77 U00ed ????				      SEG.U	VARS
+     78 U0080					      ORG	$80
+     79 U0080		       00	   frame      ds	1
+     80 U0081		       00	   rand       ds	1
+     81 U0082		       00	   state      ds	1
+     82 U0083		       00	   paused     ds	1
+     83 U0084		       00	   prevSW     ds	1
+     84 U0085		       00	   prevFire   ds	1
+     85 U0086		       00	   scoreH     ds	1
+     86 U0087		       00	   scoreL     ds	1
+     87 U0088		       00	   hiH	      ds	1
+     88 U0089		       00	   hiL	      ds	1
+     89 U008a		       00	   level      ds	1
+     90 U008b		       00	   startLevel ds	1
+     91 U008c		       00	   kills      ds	1
+     92 U008d		       00	   speed      ds	1
+     93 U008e		       00	   acc	      ds	1
+     94 U008f		       00	   pX	      ds	1
+     95 U0090		       00	   pLane      ds	1
+     96 U0091		       00	   facing     ds	1
+     97 U0092		       00	   laneRep    ds	1
+     98 U0093		       00	   shotX      ds	1
+     99 U0094		       00	   shotLane   ds	1
+    100 U0095		       00	   shotDir    ds	1
+    101 U0096		       00 00 00 00*dX	      ds	5
+    102 U009b		       00 00 00 00*dE	      ds	5
+    103 U00a0		       00 00 00 00*dT	      ds	5
+    104 U00a5		       00	   houses     ds	1
+    105 U00a6		       00	   plState    ds	1
+    106 U00a7		       00	   plLane     ds	1
+    107 U00a8		       00	   plX	      ds	1
+    108 U00a9		       00	   plTimer    ds	1
+    109 U00aa		       00	   s0T	      ds	1
+    110 U00ab		       00	   s0K	      ds	1
+    111 U00ac		       00	   s1T	      ds	1
+    112 U00ad		       00	   s1K	      ds	1
+    113 U00ae		       00	   goTimer    ds	1
+    114 U00af		       00 00 00 00*sg0	      ds	5
+    115 U00b4		       00 00 00 00*sg1	      ds	5
+    116 U00b9		       00 00 00 00*lP0x       ds	5
+    117 U00be		       00 00 00 00*lP1x       ds	5
+    118 U00c3		       00 00 00 00*lP0g       ds	5
+    119 U00c8		       00 00 00 00*lP1g       ds	5
+    120 U00cd		       00 00 00 00*lC0	      ds	5
+    121 U00d2		       00 00 00 00*lC1	      ds	5
+    122 U00d7		       00 00 00 00*lR0	      ds	5
+    123 U00dc		       00 00	   ptr0       ds	2
+    124 U00de		       00 00	   ptr1       ds	2
+    125 U00e0		       00 00	   pfptr      ds	2
+    126 U00e2		       00	   shotEn     ds	1
+    127 U00e3		       00	   colBK      ds	1
+    128 U00e4		       00	   colPF      ds	1
+    129 U00e5		       00	   colSc      ds	1
+    130 U00e6		       00	   colMask    ds	1
+    131 U00e7		       00	   temp       ds	1
+    132 U00e8		       00	   temp2      ds	1
+    133 U00e9		       00	   overrun    ds	1
+    134 U00ea		       00	   prevV      ds	1
+    135 U00eb		       00	   plAcc      ds	1
+    136 U00ec		       00	   f5	      ds	1
+    137 U00ed				   RAMEND
+ RAM used: 109 bytes
+    138 U00ed					      echo	"RAM used:", [RAMEND - $80]d, "bytes"
+    139 U00ed
+    140 U00ed					      MAC	posobj
+    141 U00ed					      sec
+    142 U00ed				   .div       sbc	#15
+    143 U00ed					      bcs	.div
+    144 U00ed					      if	>.div != >*
+    145 U00ed					      echo	"POSOBJ PAGE CROSS"
+    146 U00ed					      err
+    147 U00ed					      endif
+    148 U00ed					      eor	#7
+    149 U00ed					      asl
+    150 U00ed					      asl
+    151 U00ed					      asl
+    152 U00ed					      asl
+    153 U00ed					      sta	{1}
+    154 U00ed					      sta	{2}
+    155 U00ed					      ENDM
+    156 U00ed
+    157  10000 ????				       SEG	CODE
+    158  f000					      ORG	$F000
+    159  f000
+    160  f000				   Reset
+    161  f000					      SUBROUTINE
+      0  f000					      CLEAN_START
+      1  f000		       78		      sei
+      2  f001		       d8		      cld
+      3  f002
+      4  f002				  -	      IFNCONST	NO_ILLEGAL_OPCODES
+      5  f002				  -	      lxa	#0
+      6  f002					      ELSE
+      7  f002		       a2 00		      ldx	#0
+      8  f004		       8a		      txa
+      9  f005					      ENDIF
+     10  f005		       a8		      tay
+     11  f006		       ca	   .CLEAR_STACK dex
+     12  f007		       9a		      txs
+     13  f008		       48		      pha
+     14  f009		       d0 fb		      bne	.CLEAR_STACK
+     15  f00b
+    163  f00b		       a9 00		      lda	#0
+    164  f00d		       8d 81 02 	      sta	SWACNT
+    165  f010		       8d 83 02 	      sta	SWBCNT
+    166  f013		       a9 ff		      lda	#$FF
+    167  f015		       85 84		      sta	prevSW
+    168  f017		       85 e6		      sta	colMask
+    169  f019		       a9 01		      lda	#1
+    170  f01b		       85 8b		      sta	startLevel
+    171  f01d		       a9 a5		      lda	#$A5
+    172  f01f		       85 81		      sta	rand
+    173  f021		       20 82 f0 	      jsr	GoTitle
+    174  f024
+    175  f024				   MainLoop
+    176  f024					      SUBROUTINE
+    177  f024		       a9 02		      lda	#2
+    178  f026		       85 02		      sta	WSYNC
+    179  f028		       85 01		      sta	VBLANK
+    180  f02a		       85 00		      sta	VSYNC
+    181  f02c				  -	      IF	HZ50 = 1
+    182  f02c				  -	      lda	#VBT
+    183  f02c				  -	      sta	TIM64T
+    184  f02c					      ENDIF
+    185  f02c		       85 02		      sta	WSYNC
+    186  f02e		       85 02		      sta	WSYNC
+    187  f030		       85 02		      sta	WSYNC
+    188  f032		       a9 00		      lda	#0
+    189  f034		       85 00		      sta	VSYNC
+    190  f036					      IF	HZ50 = 0
+    191  f036		       a9 2c		      lda	#VBT
+    192  f038		       8d 96 02 	      sta	TIM64T
+    193  f03b					      ENDIF
+    194  f03b		       20 34 f5 	      jsr	Precompute
+    195  f03e		       a9 00		      lda	#0
+    196  f040		       85 09		      sta	COLUBK
+    197  f042		       ad 84 02 	      lda	INTIM
+    198  f045		       d0 02		      bne	VbWait
+    199  f047		       e6 e9		      inc	overrun
+    200  f049				   VbWait
+    201  f049		       ad 84 02 	      lda	INTIM
+    202  f04c		       d0 fb		      bne	VbWait
+    203  f04e		       85 02		      sta	WSYNC
+    204  f050		       85 01		      sta	VBLANK
+    205  f052				  -	      IF	PADL > 0
+    206  f052				  -	      ldy	#PADL
+    207  f052				  -.pt
+    208  f052				  -	      sta	WSYNC
+    209  f052				  -	      dey
+    210  f052				  -	      bne	.pt
+    211  f052					      ENDIF
+    212  f052		       a5 82		      lda	state
+    213  f054		       d0 06		      bne	.gk
+    214  f056		       20 1b f8 	      jsr	TitleKernel
+    215  f059		       4c 5f f0 	      jmp	.os
+    216  f05c				   .gk
+    217  f05c		       20 73 f7 	      jsr	GameKernel
+    218  f05f				   .os
+    219  f05f		       85 02		      sta	WSYNC
+    220  f061				  -	      IF	PADL > 0
+    221  f061				  -	      lda	#0
+    222  f061				  -	      sta	COLUBK
+    223  f061				  -	      sta	PF0
+    224  f061				  -	      sta	PF1
+    225  f061				  -	      sta	PF2
+    226  f061				  -	      sta	GRP0
+    227  f061				  -	      sta	GRP1
+    228  f061				  -	      sta	ENAM0
+    229  f061				  -	      ldy	#PADL
+    230  f061				  -.pb
+    231  f061				  -	      sta	WSYNC
+    232  f061				  -	      dey
+    233  f061				  -	      bne	.pb
+    234  f061					      ENDIF
+    235  f061		       a9 02		      lda	#2
+    236  f063		       85 01		      sta	VBLANK
+    237  f065		       a9 24		      lda	#OST
+    238  f067		       8d 96 02 	      sta	TIM64T
+    239  f06a		       20 42 f1 	      jsr	Switches
+    240  f06d		       20 84 f1 	      jsr	Update
+    241  f070		       20 2c f4 	      jsr	Sound
+    242  f073		       ad 84 02 	      lda	INTIM
+    243  f076		       d0 02		      bne	OsWait
+    244  f078		       e6 e9		      inc	overrun
+    245  f07a				   OsWait
+    246  f07a		       ad 84 02 	      lda	INTIM
+    247  f07d		       d0 fb		      bne	OsWait
+    248  f07f		       4c 24 f0 	      jmp	MainLoop
+    249  f082
+    250  f082				   GoTitle
+    251  f082					      SUBROUTINE
+    252  f082		       a9 00		      lda	#ST_TITLE
+    253  f084		       85 82		      sta	state
+    254  f086		       a9 00		      lda	#0
+    255  f088		       85 83		      sta	paused
+    256  f08a		       85 aa		      sta	s0T
+    257  f08c		       85 ac		      sta	s1T
+    258  f08e		       85 19		      sta	AUDV0
+    259  f090		       85 1a		      sta	AUDV1
+    260  f092		       60		      rts
+    261  f093
+    262  f093				   NewGame
+    263  f093					      SUBROUTINE
+    264  f093		       a9 01		      lda	#ST_PLAY
+    265  f095		       85 82		      sta	state
+    266  f097		       a9 00		      lda	#0
+    267  f099		       85 83		      sta	paused
+    268  f09b		       85 86		      sta	scoreH
+    269  f09d		       85 87		      sta	scoreL
+    270  f09f		       85 8c		      sta	kills
+    271  f0a1		       85 95		      sta	shotDir
+    272  f0a3		       85 93		      sta	shotX
+    273  f0a5		       85 a6		      sta	plState
+    274  f0a7		       85 91		      sta	facing
+    275  f0a9		       85 92		      sta	laneRep
+    276  f0ab		       85 8e		      sta	acc
+    277  f0ad		       85 aa		      sta	s0T
+    278  f0af		       85 ac		      sta	s1T
+    279  f0b1		       85 ae		      sta	goTimer
+    280  f0b3		       a9 1f		      lda	#%11111
+    281  f0b5		       85 a5		      sta	houses
+    282  f0b7		       a5 8b		      lda	startLevel
+    283  f0b9		       85 8a		      sta	level
+    284  f0bb		       a9 18		      lda	#24
+    285  f0bd		       85 8f		      sta	pX
+    286  f0bf		       a9 02		      lda	#2
+    287  f0c1		       85 90		      sta	pLane
+    288  f0c3		       a2 04		      ldx	#4
+    289  f0c5				   .n1
+    290  f0c5		       a9 00		      lda	#0
+    291  f0c7		       95 96		      sta	dX,x
+    292  f0c9		       95 9b		      sta	dE,x
+    293  f0cb		       20 ec f0 	      jsr	SpawnDelay
+    294  f0ce		       8a		      txa
+    295  f0cf		       0a		      asl
+    296  f0d0		       0a		      asl
+    297  f0d1		       0a		      asl
+    298  f0d2					      IF	HZ50 = 0
+    299  f0d2		       0a		      asl
+    300  f0d3					      ENDIF
+    301  f0d3		       18		      clc
+    302  f0d4		       75 a0		      adc	dT,x
+    303  f0d6		       95 a0		      sta	dT,x
+    304  f0d8		       ca		      dex
+    305  f0d9		       10 ea		      bpl	.n1
+    306  f0db		       20 fa f0 	      jsr	PlRespawn
+    307  f0de		       20 08 f1 	      jsr	SetSpeed
+    308  f0e1		       60		      rts
+    309  f0e2
+    310  f0e2				   Rand
+    311  f0e2					      SUBROUTINE
+    312  f0e2		       a5 81		      lda	rand
+    313  f0e4		       4a		      lsr
+    314  f0e5		       90 02		      bcc	.r1
+    315  f0e7		       49 b8		      eor	#$B8
+    316  f0e9				   .r1
+    317  f0e9		       85 81		      sta	rand
+    318  f0eb		       60		      rts
+    319  f0ec
+    320  f0ec				   SpawnDelay
+    321  f0ec					      SUBROUTINE
+    322  f0ec		       20 e2 f0 	      jsr	Rand
+    323  f0ef		       29 3f		      and	#63
+    324  f0f1		       a4 8a		      ldy	level
+    325  f0f3		       18		      clc
+    326  f0f4		       79 9a f8 	      adc	SpawnBase,y
+    327  f0f7		       95 a0		      sta	dT,x
+    328  f0f9		       60		      rts
+    329  f0fa
+    330  f0fa				   PlRespawn
+    331  f0fa					      SUBROUTINE
+    332  f0fa		       20 e2 f0 	      jsr	Rand
+    333  f0fd		       29 7f		      and	#127
+    334  f0ff		       a4 8a		      ldy	level
+    335  f101		       18		      clc
+    336  f102		       79 a4 f8 	      adc	PlBase,y
+    337  f105		       85 a9		      sta	plTimer
+    338  f107		       60		      rts
+    339  f108
+    340  f108				   SetSpeed
+    341  f108					      SUBROUTINE
+    342  f108		       a6 8a		      ldx	level
+    343  f10a		       bd 90 f8 	      lda	SpeedTab,x
+    344  f10d		       2c 82 02 	      bit	SWCHB
+    345  f110		       50 07		      bvc	.ss
+    346  f112		       18		      clc
+    347  f113		       69 28		      adc	#DIFFADD
+    348  f115		       90 02		      bcc	.ss
+    349  f117		       a9 ff		      lda	#255
+    350  f119				   .ss
+    351  f119		       85 8d		      sta	speed
+    352  f11b		       60		      rts
+    353  f11c
+    354  f11c				   SabTime
+    355  f11c					      SUBROUTINE
+    356  f11c		       a4 8a		      ldy	level
+    357  f11e		       b9 ae f8 	      lda	SabTab,y
+    358  f121		       2c 82 02 	      bit	SWCHB
+    359  f124		       10 03		      bpl	.sb
+    360  f126		       38		      sec
+    361  f127		       e9 3c		      sbc	#[60*FPSN/6]
+    362  f129				   .sb
+    363  f129		       85 a9		      sta	plTimer
+    364  f12b		       60		      rts
+    365  f12c
+    366  f12c				   AddScore
+    367  f12c					      SUBROUTINE
+    368  f12c		       f8		      sed
+    369  f12d		       18		      clc
+    370  f12e		       65 87		      adc	scoreL
+    371  f130		       85 87		      sta	scoreL
+    372  f132		       a5 86		      lda	scoreH
+    373  f134		       69 00		      adc	#0
+    374  f136		       85 86		      sta	scoreH
+    375  f138		       d8		      cld
+    376  f139		       90 06		      bcc	.as
+    377  f13b		       a9 99		      lda	#$99
+    378  f13d		       85 86		      sta	scoreH
+    379  f13f		       85 87		      sta	scoreL
+    380  f141				   .as
+    381  f141		       60		      rts
+    382  f142
+    383  f142				   Switches
+    384  f142					      SUBROUTINE
+    385  f142		       ad 82 02 	      lda	SWCHB
+    386  f145		       85 e7		      sta	temp
+    387  f147		       49 ff		      eor	#$FF
+    388  f149		       25 84		      and	prevSW
+    389  f14b		       85 e8		      sta	temp2
+    390  f14d		       a5 e7		      lda	temp
+    391  f14f		       45 84		      eor	prevSW
+    392  f151		       29 08		      and	#$08
+    393  f153		       f0 0c		      beq	.nobw
+    394  f155				  -	      IF	NOPAUSE = 1
+    395  f155				  -	      jmp	.nobw
+    396  f155					      ENDIF
+    397  f155		       a5 82		      lda	state
+    398  f157		       c9 01		      cmp	#ST_PLAY
+    399  f159		       d0 06		      bne	.nobw
+    400  f15b		       a5 83		      lda	paused
+    401  f15d		       49 01		      eor	#1
+    402  f15f		       85 83		      sta	paused
+    403  f161				   .nobw
+    404  f161		       a5 e7		      lda	temp
+    405  f163		       85 84		      sta	prevSW
+    406  f165		       a5 e8		      lda	temp2
+    407  f167		       4a		      lsr
+    408  f168		       90 03		      bcc	.noreset
+    409  f16a		       4c 93 f0 	      jmp	NewGame
+    410  f16d				   .noreset
+    411  f16d		       4a		      lsr
+    412  f16e		       90 13		      bcc	.nosel
+    413  f170		       a5 82		      lda	state
+    414  f172		       d0 0c		      bne	.totitle
+    415  f174		       a6 8b		      ldx	startLevel
+    416  f176		       e8		      inx
+    417  f177		       e0 05		      cpx	#5
+    418  f179		       90 02		      bcc	.sl1
+    419  f17b		       a2 01		      ldx	#1
+    420  f17d				   .sl1
+    421  f17d		       86 8b		      stx	startLevel
+    422  f17f		       60		      rts
+    423  f180				   .totitle
+    424  f180		       4c 82 f0 	      jmp	GoTitle
+    425  f183				   .nosel
+    426  f183		       60		      rts
+    427  f184
+    428  f184				   Update
+    429  f184					      SUBROUTINE
+    430  f184		       20 e2 f0 	      jsr	Rand
+    431  f187		       e6 80		      inc	frame
+    432  f189				  -	      IF	HZ50 = 1
+    433  f189				  -	      dec	f5
+    434  f189				  -	      bpl	.f5ok
+    435  f189				  -	      lda	#4
+    436  f189				  -	      sta	f5
+    437  f189				  -.f5ok
+    438  f189					      ENDIF
+    439  f189		       a5 0c		      lda	INPT4
+    440  f18b		       29 80		      and	#$80
+    441  f18d		       85 e7		      sta	temp
+    442  f18f		       a5 85		      lda	prevFire
+    443  f191		       45 e7		      eor	temp
+    444  f193		       25 85		      and	prevFire
+    445  f195		       85 e8		      sta	temp2
+    446  f197		       a5 e7		      lda	temp
+    447  f199		       85 85		      sta	prevFire
+    448  f19b		       a5 82		      lda	state
+    449  f19d		       f0 09		      beq	.utitle
+    450  f19f		       c9 02		      cmp	#ST_OVER
+    451  f1a1		       f0 0c		      beq	.uover
+    452  f1a3		       a5 83		      lda	paused
+    453  f1a5		       f0 17		      beq	Play
+    454  f1a7		       60		      rts
+    455  f1a8				   .utitle
+    456  f1a8		       a5 e8		      lda	temp2
+    457  f1aa		       f0 11		      beq	.ur
+    458  f1ac		       4c 93 f0 	      jmp	NewGame
+    459  f1af				   .uover
+    460  f1af		       a5 ae		      lda	goTimer
+    461  f1b1		       f0 03		      beq	.uo1
+    462  f1b3		       c6 ae		      dec	goTimer
+    463  f1b5		       60		      rts
+    464  f1b6				   .uo1
+    465  f1b6		       a5 e8		      lda	temp2
+    466  f1b8		       f0 03		      beq	.ur
+    467  f1ba		       4c 93 f0 	      jmp	NewGame
+    468  f1bd				   .ur
+    469  f1bd		       60		      rts
+    470  f1be
+    471  f1be				   Play
+    472  f1be					      SUBROUTINE
+    473  f1be		       20 08 f1 	      jsr	SetSpeed
+    474  f1c1		       ad 80 02 	      lda	SWCHA
+    475  f1c4		       85 e7		      sta	temp
+    476  f1c6		       30 0c		      bmi	.noR
+    477  f1c8		       a5 8f		      lda	pX
+    478  f1ca		       c9 3c		      cmp	#60
+    479  f1cc		       b0 02		      bcs	.rf
+    480  f1ce		       e6 8f		      inc	pX
+    481  f1d0				  -	      IF	HZ50 = 1
+    482  f1d0				  -	      lda	f5
+    483  f1d0				  -	      bne	.rf
+    484  f1d0				  -	      lda	pX
+    485  f1d0				  -	      cmp	#60
+    486  f1d0				  -	      bcs	.rf
+    487  f1d0				  -	      inc	pX
+    488  f1d0					      ENDIF
+    489  f1d0				   .rf
+    490  f1d0		       a9 00		      lda	#0
+    491  f1d2		       85 91		      sta	facing
+    492  f1d4				   .noR
+    493  f1d4		       a5 e7		      lda	temp
+    494  f1d6		       29 40		      and	#$40
+    495  f1d8		       d0 0c		      bne	.noL
+    496  f1da		       a5 8f		      lda	pX
+    497  f1dc		       c9 15		      cmp	#21
+    498  f1de		       90 02		      bcc	.lf
+    499  f1e0		       c6 8f		      dec	pX
+    500  f1e2				  -	      IF	HZ50 = 1
+    501  f1e2				  -	      lda	f5
+    502  f1e2				  -	      bne	.lf
+    503  f1e2				  -	      lda	pX
+    504  f1e2				  -	      cmp	#21
+    505  f1e2				  -	      bcc	.lf
+    506  f1e2				  -	      dec	pX
+    507  f1e2					      ENDIF
+    508  f1e2				   .lf
+    509  f1e2		       a9 08		      lda	#8
+    510  f1e4		       85 91		      sta	facing
+    511  f1e6				   .noL
+    512  f1e6		       a5 e7		      lda	temp
+    513  f1e8		       29 30		      and	#$30
+    514  f1ea		       c5 ea		      cmp	prevV
+    515  f1ec		       85 ea		      sta	prevV
+    516  f1ee		       f0 04		      beq	.same
+    517  f1f0		       a9 00		      lda	#0
+    518  f1f2		       85 92		      sta	laneRep
+    519  f1f4				   .same
+    520  f1f4		       a5 ea		      lda	prevV
+    521  f1f6		       c9 30		      cmp	#$30
+    522  f1f8		       f0 24		      beq	.vdone
+    523  f1fa		       a5 92		      lda	laneRep
+    524  f1fc		       f0 05		      beq	.vmove
+    525  f1fe		       c6 92		      dec	laneRep
+    526  f200		       4c 1e f2 	      jmp	.vdone
+    527  f203				   .vmove
+    528  f203		       a9 0a		      lda	#LREP
+    529  f205		       85 92		      sta	laneRep
+    530  f207		       a5 e7		      lda	temp
+    531  f209		       29 10		      and	#$10
+    532  f20b		       d0 09		      bne	.notUp
+    533  f20d		       a5 90		      lda	pLane
+    534  f20f		       f0 0d		      beq	.vdone
+    535  f211		       c6 90		      dec	pLane
+    536  f213		       4c 1e f2 	      jmp	.vdone
+    537  f216				   .notUp
+    538  f216		       a5 90		      lda	pLane
+    539  f218		       c9 04		      cmp	#4
+    540  f21a		       b0 02		      bcs	.vdone
+    541  f21c		       e6 90		      inc	pLane
+    542  f21e				   .vdone
+    543  f21e		       a5 e8		      lda	temp2
+    544  f220		       f0 2c		      beq	.nofire
+    545  f222		       a5 95		      lda	shotDir
+    546  f224		       d0 28		      bne	.nofire
+    547  f226		       a5 90		      lda	pLane
+    548  f228		       85 94		      sta	shotLane
+    549  f22a		       a5 91		      lda	facing
+    550  f22c		       d0 0d		      bne	.fl
+    551  f22e		       a5 8f		      lda	pX
+    552  f230		       18		      clc
+    553  f231		       69 08		      adc	#8
+    554  f233		       85 93		      sta	shotX
+    555  f235		       a9 02		      lda	#$02
+    556  f237		       85 95		      sta	shotDir
+    557  f239		       d0 0b		      bne	.fs
+    558  f23b				   .fl
+    559  f23b		       a5 8f		      lda	pX
+    560  f23d		       38		      sec
+    561  f23e		       e9 04		      sbc	#4
+    562  f240		       85 93		      sta	shotX
+    563  f242		       a9 82		      lda	#$82
+    564  f244		       85 95		      sta	shotDir
+    565  f246				   .fs
+    566  f246		       a9 00		      lda	#0
+    567  f248		       85 ab		      sta	s0K
+    568  f24a		       a9 08		      lda	#8
+    569  f24c		       85 aa		      sta	s0T
+    570  f24e				   .nofire
+    571  f24e		       a5 95		      lda	shotDir
+    572  f250		       f0 22		      beq	.noshot
+    573  f252		       30 0d		      bmi	.sleft
+    574  f254		       a5 93		      lda	shotX
+    575  f256		       18		      clc
+    576  f257		       69 04		      adc	#SHOTSPD
+    577  f259		       85 93		      sta	shotX
+    578  f25b		       c9 92		      cmp	#146
+    579  f25d		       90 15		      bcc	.noshot
+    580  f25f		       b0 0d		      bcs	.shotoff
+    581  f261				   .sleft
+    582  f261		       a5 93		      lda	shotX
+    583  f263		       38		      sec
+    584  f264		       e9 04		      sbc	#SHOTSPD
+    585  f266		       90 06		      bcc	.shotoff
+    586  f268		       85 93		      sta	shotX
+    587  f26a		       c9 04		      cmp	#4
+    588  f26c		       b0 06		      bcs	.noshot
+    589  f26e				   .shotoff
+    590  f26e		       a9 00		      lda	#0
+    591  f270		       85 95		      sta	shotDir
+    592  f272		       85 93		      sta	shotX
+    593  f274				   .noshot
+    594  f274		       a9 00		      lda	#0
+    595  f276		       85 e7		      sta	temp
+    596  f278		       a5 8e		      lda	acc
+    597  f27a		       18		      clc
+    598  f27b		       65 8d		      adc	speed
+    599  f27d				  -	      IF	HZ50 = 1
+    600  f27d				  -	      bcc	.ac1
+    601  f27d				  -	      inc	temp
+    602  f27d				  -	      clc
+    603  f27d				  -.ac1
+    604  f27d				  -	      adc	speed
+    605  f27d					      ENDIF
+    606  f27d		       85 8e		      sta	acc
+    607  f27f		       90 02		      bcc	.ac2
+    608  f281		       e6 e7		      inc	temp
+    609  f283				   .ac2
+    610  f283		       a2 04		      ldx	#4
+    611  f285				   .dl
+    612  f285		       b5 9b		      lda	dE,x
+    613  f287		       f0 0e		      beq	.dnoexp
+    614  f289		       d6 9b		      dec	dE,x
+    615  f28b		       d0 52		      bne	.dnext
+    616  f28d		       a9 00		      lda	#0
+    617  f28f		       95 96		      sta	dX,x
+    618  f291		       20 ec f0 	      jsr	SpawnDelay
+    619  f294		       4c df f2 	      jmp	.dnext
+    620  f297				   .dnoexp
+    621  f297		       b5 96		      lda	dX,x
+    622  f299		       d0 17		      bne	.dact
+    623  f29b		       b5 a0		      lda	dT,x
+    624  f29d		       f0 05		      beq	.dspawn
+    625  f29f		       d6 a0		      dec	dT,x
+    626  f2a1		       4c df f2 	      jmp	.dnext
+    627  f2a4				   .dspawn
+    628  f2a4		       a5 a5		      lda	houses
+    629  f2a6		       3d 81 f8 	      and	LaneBit,x
+    630  f2a9		       f0 34		      beq	.dnext
+    631  f2ab		       a9 94		      lda	#148
+    632  f2ad		       95 96		      sta	dX,x
+    633  f2af		       4c df f2 	      jmp	.dnext
+    634  f2b2				   .dact
+    635  f2b2		       a5 e7		      lda	temp
+    636  f2b4		       f0 29		      beq	.dnext
+    637  f2b6		       4a		      lsr
+    638  f2b7		       f0 02		      beq	.dmv1
+    639  f2b9		       d6 96		      dec	dX,x
+    640  f2bb				   .dmv1
+    641  f2bb		       d6 96		      dec	dX,x
+    642  f2bd		       b5 96		      lda	dX,x
+    643  f2bf		       c9 11		      cmp	#17
+    644  f2c1		       b0 1c		      bcs	.dnext
+    645  f2c3		       a9 10		      lda	#16
+    646  f2c5		       95 9b		      sta	dE,x
+    647  f2c7		       a5 a5		      lda	houses
+    648  f2c9		       3d 81 f8 	      and	LaneBit,x
+    649  f2cc		       f0 11		      beq	.dnext
+    650  f2ce		       bd 81 f8 	      lda	LaneBit,x
+    651  f2d1		       49 ff		      eor	#$FF
+    652  f2d3		       25 a5		      and	houses
+    653  f2d5		       85 a5		      sta	houses
+    654  f2d7		       a9 02		      lda	#2
+    655  f2d9		       85 ab		      sta	s0K
+    656  f2db		       a9 1f		      lda	#31
+    657  f2dd		       85 aa		      sta	s0T
+    658  f2df				   .dnext
+    659  f2df		       ca		      dex
+    660  f2e0		       10 a3		      bpl	.dl
+    661  f2e2		       a5 95		      lda	shotDir
+    662  f2e4		       f0 7e		      beq	.nsc
+    663  f2e6		       a6 94		      ldx	shotLane
+    664  f2e8		       b5 96		      lda	dX,x
+    665  f2ea		       f0 44		      beq	.npc
+    666  f2ec		       b5 9b		      lda	dE,x
+    667  f2ee		       d0 40		      bne	.npc
+    668  f2f0		       a5 93		      lda	shotX
+    669  f2f2		       18		      clc
+    670  f2f3		       69 04		      adc	#4
+    671  f2f5		       d5 96		      cmp	dX,x
+    672  f2f7		       90 37		      bcc	.npc
+    673  f2f9		       b5 96		      lda	dX,x
+    674  f2fb		       18		      clc
+    675  f2fc		       69 08		      adc	#8
+    676  f2fe		       c5 93		      cmp	shotX
+    677  f300		       90 2e		      bcc	.npc
+    678  f302		       a9 10		      lda	#16
+    679  f304		       95 9b		      sta	dE,x
+    680  f306		       a9 00		      lda	#0
+    681  f308		       85 95		      sta	shotDir
+    682  f30a		       85 93		      sta	shotX
+    683  f30c		       a9 01		      lda	#1
+    684  f30e		       20 2c f1 	      jsr	AddScore
+    685  f311		       a9 01		      lda	#1
+    686  f313		       85 ab		      sta	s0K
+    687  f315		       a9 0f		      lda	#15
+    688  f317		       85 aa		      sta	s0T
+    689  f319		       e6 8c		      inc	kills
+    690  f31b		       a5 8c		      lda	kills
+    691  f31d		       c9 08		      cmp	#8
+    692  f31f		       90 43		      bcc	.nsc
+    693  f321		       a9 00		      lda	#0
+    694  f323		       85 8c		      sta	kills
+    695  f325		       a5 8a		      lda	level
+    696  f327		       c9 09		      cmp	#9
+    697  f329		       b0 39		      bcs	.nsc
+    698  f32b		       e6 8a		      inc	level
+    699  f32d		       4c 64 f3 	      jmp	.nsc
+    700  f330				   .npc
+    701  f330		       a5 a6		      lda	plState
+    702  f332		       f0 30		      beq	.nsc
+    703  f334		       a5 94		      lda	shotLane
+    704  f336		       c5 a7		      cmp	plLane
+    705  f338		       d0 2a		      bne	.nsc
+    706  f33a		       a5 93		      lda	shotX
+    707  f33c		       18		      clc
+    708  f33d		       69 04		      adc	#4
+    709  f33f		       c5 a8		      cmp	plX
+    710  f341		       90 21		      bcc	.nsc
+    711  f343		       a5 a8		      lda	plX
+    712  f345		       18		      clc
+    713  f346		       69 08		      adc	#8
+    714  f348		       c5 93		      cmp	shotX
+    715  f34a		       90 18		      bcc	.nsc
+    716  f34c		       a9 00		      lda	#0
+    717  f34e		       85 95		      sta	shotDir
+    718  f350		       85 93		      sta	shotX
+    719  f352		       85 a6		      sta	plState
+    720  f354		       20 fa f0 	      jsr	PlRespawn
+    721  f357		       a9 05		      lda	#5
+    722  f359		       20 2c f1 	      jsr	AddScore
+    723  f35c		       a9 00		      lda	#0
+    724  f35e		       85 ad		      sta	s1K
+    725  f360		       a9 17		      lda	#23
+    726  f362		       85 ac		      sta	s1T
+    727  f364				   .nsc
+    728  f364		       a5 a6		      lda	plState
+    729  f366		       d0 38		      bne	.pa
+    730  f368		       c6 a9		      dec	plTimer
+    731  f36a		       f0 03		      beq	.pspawn
+    732  f36c		       4c f0 f3 	      jmp	.pdone
+    733  f36f				   .pspawn
+    734  f36f		       20 e2 f0 	      jsr	Rand
+    735  f372		       29 07		      and	#7
+    736  f374		       c9 05		      cmp	#5
+    737  f376		       90 02		      bcc	.p1
+    738  f378		       e9 05		      sbc	#5
+    739  f37a				   .p1
+    740  f37a		       aa		      tax
+    741  f37b		       a0 05		      ldy	#5
+    742  f37d				   .p2
+    743  f37d		       a5 a5		      lda	houses
+    744  f37f		       3d 81 f8 	      and	LaneBit,x
+    745  f382		       d0 10		      bne	.p3
+    746  f384		       e8		      inx
+    747  f385		       e0 05		      cpx	#5
+    748  f387		       90 02		      bcc	.p4
+    749  f389		       a2 00		      ldx	#0
+    750  f38b				   .p4
+    751  f38b		       88		      dey
+    752  f38c		       d0 ef		      bne	.p2
+    753  f38e		       a9 1e		      lda	#[30*FPSN/6]
+    754  f390		       85 a9		      sta	plTimer
+    755  f392		       d0 5c		      bne	.pdone
+    756  f394				   .p3
+    757  f394		       86 a7		      stx	plLane
+    758  f396		       a9 3c		      lda	#60
+    759  f398		       85 a8		      sta	plX
+    760  f39a		       a9 01		      lda	#1
+    761  f39c		       85 a6		      sta	plState
+    762  f39e		       d0 50		      bne	.pdone
+    763  f3a0				   .pa
+    764  f3a0		       a6 a7		      ldx	plLane
+    765  f3a2		       a5 a5		      lda	houses
+    766  f3a4		       3d 81 f8 	      and	LaneBit,x
+    767  f3a7		       d0 0a		      bne	.pb
+    768  f3a9		       a9 00		      lda	#0
+    769  f3ab		       85 a6		      sta	plState
+    770  f3ad		       a9 28		      lda	#[40*FPSN/6]
+    771  f3af		       85 a9		      sta	plTimer
+    772  f3b1		       d0 3d		      bne	.pdone
+    773  f3b3				   .pb
+    774  f3b3		       a5 a6		      lda	plState
+    775  f3b5		       c9 01		      cmp	#1
+    776  f3b7		       d0 1b		      bne	.ps
+    777  f3b9		       a5 eb		      lda	plAcc
+    778  f3bb		       18		      clc
+    779  f3bc		       69 40		      adc	#PLWALK
+    780  f3be		       85 eb		      sta	plAcc
+    781  f3c0		       90 2e		      bcc	.pdone
+    782  f3c2		       c6 a8		      dec	plX
+    783  f3c4		       a5 a8		      lda	plX
+    784  f3c6		       c9 12		      cmp	#18
+    785  f3c8		       b0 26		      bcs	.pdone
+    786  f3ca		       a9 02		      lda	#2
+    787  f3cc		       85 a6		      sta	plState
+    788  f3ce		       20 1c f1 	      jsr	SabTime
+    789  f3d1		       4c f0 f3 	      jmp	.pdone
+    790  f3d4				   .ps
+    791  f3d4		       c6 a9		      dec	plTimer
+    792  f3d6		       d0 18		      bne	.pdone
+    793  f3d8		       bd 81 f8 	      lda	LaneBit,x
+    794  f3db		       49 ff		      eor	#$FF
+    795  f3dd		       25 a5		      and	houses
+    796  f3df		       85 a5		      sta	houses
+    797  f3e1		       a9 02		      lda	#2
+    798  f3e3		       85 ab		      sta	s0K
+    799  f3e5		       a9 1f		      lda	#31
+    800  f3e7		       85 aa		      sta	s0T
+    801  f3e9		       a9 00		      lda	#0
+    802  f3eb		       85 a6		      sta	plState
+    803  f3ed		       20 fa f0 	      jsr	PlRespawn
+    804  f3f0				   .pdone
+    805  f3f0		       a5 a5		      lda	houses
+    806  f3f2		       d0 37		      bne	.alive
+    807  f3f4		       a9 02		      lda	#ST_OVER
+    808  f3f6		       85 82		      sta	state
+    809  f3f8		       a9 78		      lda	#[120*FPSN/6]
+    810  f3fa		       85 ae		      sta	goTimer
+    811  f3fc		       a9 00		      lda	#0
+    812  f3fe		       85 95		      sta	shotDir
+    813  f400		       85 93		      sta	shotX
+    814  f402		       85 a6		      sta	plState
+    815  f404		       a2 04		      ldx	#4
+    816  f406				   .go1
+    817  f406		       95 96		      sta	dX,x
+    818  f408		       95 9b		      sta	dE,x
+    819  f40a		       ca		      dex
+    820  f40b		       10 f9		      bpl	.go1
+    821  f40d		       a9 01		      lda	#1
+    822  f40f		       85 ad		      sta	s1K
+    823  f411		       a9 3f		      lda	#63
+    824  f413		       85 ac		      sta	s1T
+    825  f415		       a5 86		      lda	scoreH
+    826  f417		       c5 88		      cmp	hiH
+    827  f419		       90 10		      bcc	.alive
+    828  f41b		       d0 06		      bne	.sethi
+    829  f41d		       a5 87		      lda	scoreL
+    830  f41f		       c5 89		      cmp	hiL
+    831  f421		       90 08		      bcc	.alive
+    832  f423				   .sethi
+    833  f423		       a5 86		      lda	scoreH
+    834  f425		       85 88		      sta	hiH
+    835  f427		       a5 87		      lda	scoreL
+    836  f429		       85 89		      sta	hiL
+    837  f42b				   .alive
+    838  f42b		       60		      rts
+    839  f42c
+    840  f42c				   Sound
+    841  f42c					      SUBROUTINE
+    842  f42c		       a5 83		      lda	paused
+    843  f42e		       f0 07		      beq	.s0
+    844  f430		       a9 00		      lda	#0
+    845  f432		       85 19		      sta	AUDV0
+    846  f434		       85 1a		      sta	AUDV1
+    847  f436		       60		      rts
+    848  f437				   .s0
+    849  f437		       a5 aa		      lda	s0T
+    850  f439		       f0 3d		      beq	.s0off
+    851  f43b		       c6 aa		      dec	s0T
+    852  f43d		       a5 ab		      lda	s0K
+    853  f43f		       d0 12		      bne	.s0b
+    854  f441		       a9 04		      lda	#4
+    855  f443		       85 15		      sta	AUDC0
+    856  f445		       a5 aa		      lda	s0T
+    857  f447		       18		      clc
+    858  f448		       69 02		      adc	#2
+    859  f44a		       85 17		      sta	AUDF0
+    860  f44c		       a5 aa		      lda	s0T
+    861  f44e		       85 19		      sta	AUDV0
+    862  f450		       4c 7c f4 	      jmp	.ch1
+    863  f453				   .s0b
+    864  f453		       a9 08		      lda	#8
+    865  f455		       85 15		      sta	AUDC0
+    866  f457		       a5 ab		      lda	s0K
+    867  f459		       c9 01		      cmp	#1
+    868  f45b		       d0 0f		      bne	.s0h
+    869  f45d		       a9 1f		      lda	#31
+    870  f45f		       38		      sec
+    871  f460		       e5 aa		      sbc	s0T
+    872  f462		       85 17		      sta	AUDF0
+    873  f464		       a5 aa		      lda	s0T
+    874  f466		       4a		      lsr
+    875  f467		       85 19		      sta	AUDV0
+    876  f469		       4c 7c f4 	      jmp	.ch1
+    877  f46c				   .s0h
+    878  f46c		       a9 1f		      lda	#31
+    879  f46e		       85 17		      sta	AUDF0
+    880  f470		       a5 aa		      lda	s0T
+    881  f472		       4a		      lsr
+    882  f473		       85 19		      sta	AUDV0
+    883  f475		       4c 7c f4 	      jmp	.ch1
+    884  f478				   .s0off
+    885  f478		       a9 00		      lda	#0
+    886  f47a		       85 19		      sta	AUDV0
+    887  f47c				   .ch1
+    888  f47c		       a5 ac		      lda	s1T
+    889  f47e		       f0 23		      beq	.s1idle
+    890  f480		       c6 ac		      dec	s1T
+    891  f482		       a5 ad		      lda	s1K
+    892  f484		       d0 0d		      bne	.s1go
+    893  f486		       a9 04		      lda	#4
+    894  f488		       85 16		      sta	AUDC1
+    895  f48a		       a5 ac		      lda	s1T
+    896  f48c		       85 18		      sta	AUDF1
+    897  f48e		       a9 0a		      lda	#10
+    898  f490		       85 1a		      sta	AUDV1
+    899  f492		       60		      rts
+    900  f493				   .s1go
+    901  f493		       a9 0c		      lda	#12
+    902  f495		       85 16		      sta	AUDC1
+    903  f497		       a5 ac		      lda	s1T
+    904  f499		       4a		      lsr
+    905  f49a		       49 1f		      eor	#$1F
+    906  f49c		       85 18		      sta	AUDF1
+    907  f49e		       a9 08		      lda	#8
+    908  f4a0		       85 1a		      sta	AUDV1
+    909  f4a2		       60		      rts
+    910  f4a3				   .s1idle
+    911  f4a3		       a5 82		      lda	state
+    912  f4a5		       c9 01		      cmp	#ST_PLAY
+    913  f4a7		       d0 30		      bne	.s1off
+    914  f4a9		       a5 a6		      lda	plState
+    915  f4ab		       f0 2c		      beq	.s1off
+    916  f4ad		       c9 02		      cmp	#2
+    917  f4af		       f0 15		      beq	.warn
+    918  f4b1		       a5 80		      lda	frame
+    919  f4b3		       29 1f		      and	#31
+    920  f4b5		       c9 03		      cmp	#3
+    921  f4b7		       b0 20		      bcs	.s1off
+    922  f4b9		       a9 01		      lda	#1
+    923  f4bb		       85 16		      sta	AUDC1
+    924  f4bd		       a9 14		      lda	#20
+    925  f4bf		       85 18		      sta	AUDF1
+    926  f4c1		       a9 04		      lda	#4
+    927  f4c3		       85 1a		      sta	AUDV1
+    928  f4c5		       60		      rts
+    929  f4c6				   .warn
+    930  f4c6		       a5 80		      lda	frame
+    931  f4c8		       29 08		      and	#8
+    932  f4ca		       f0 0d		      beq	.s1off
+    933  f4cc		       a9 0c		      lda	#12
+    934  f4ce		       85 16		      sta	AUDC1
+    935  f4d0		       a9 08		      lda	#8
+    936  f4d2		       85 18		      sta	AUDF1
+    937  f4d4		       a9 08		      lda	#8
+    938  f4d6		       85 1a		      sta	AUDV1
+    939  f4d8		       60		      rts
+    940  f4d9				   .s1off
+    941  f4d9		       a9 00		      lda	#0
+    942  f4db		       85 1a		      sta	AUDV1
+    943  f4dd		       60		      rts
+    944  f4de
+    945  f4de				   MakeScore
+    946  f4de					      SUBROUTINE
+    947  f4de		       a5 e7		      lda	temp
+    948  f4e0		       4a		      lsr
+    949  f4e1		       4a		      lsr
+    950  f4e2		       4a		      lsr
+    951  f4e3		       4a		      lsr
+    952  f4e4		       a8		      tay
+    953  f4e5		       b9 86 f8 	      lda	Mul5,y
+    954  f4e8		       85 dc		      sta	ptr0
+    955  f4ea		       a5 e7		      lda	temp
+    956  f4ec		       29 0f		      and	#$0F
+    957  f4ee		       a8		      tay
+    958  f4ef		       b9 86 f8 	      lda	Mul5,y
+    959  f4f2		       85 de		      sta	ptr1
+    960  f4f4		       a5 e8		      lda	temp2
+    961  f4f6		       4a		      lsr
+    962  f4f7		       4a		      lsr
+    963  f4f8		       4a		      lsr
+    964  f4f9		       4a		      lsr
+    965  f4fa		       a8		      tay
+    966  f4fb		       b9 86 f8 	      lda	Mul5,y
+    967  f4fe		       85 e0		      sta	pfptr
+    968  f500		       a5 e8		      lda	temp2
+    969  f502		       29 0f		      and	#$0F
+    970  f504		       a8		      tay
+    971  f505		       b9 86 f8 	      lda	Mul5,y
+    972  f508		       85 e1		      sta	pfptr+1
+    973  f50a		       a0 00		      ldy	#0
+    974  f50c				   .ms
+    975  f50c		       a6 dc		      ldx	ptr0
+    976  f50e		       bd e0 f9 	      lda	DigHi,x
+    977  f511		       a6 de		      ldx	ptr1
+    978  f513		       1d 12 fa 	      ora	DigLo,x
+    979  f516		       99 af 00 	      sta	sg0,y
+    980  f519		       a6 e0		      ldx	pfptr
+    981  f51b		       bd e0 f9 	      lda	DigHi,x
+    982  f51e		       a6 e1		      ldx	pfptr+1
+    983  f520		       1d 12 fa 	      ora	DigLo,x
+    984  f523		       99 b4 00 	      sta	sg1,y
+    985  f526		       e6 dc		      inc	ptr0
+    986  f528		       e6 de		      inc	ptr1
+    987  f52a		       e6 e0		      inc	pfptr
+    988  f52c		       e6 e1		      inc	pfptr+1
+    989  f52e		       c8		      iny
+    990  f52f		       c0 05		      cpy	#5
+    991  f531		       d0 d9		      bne	.ms
+    992  f533		       60		      rts
+    993  f534
+    994  f534				   Precompute
+    995  f534					      SUBROUTINE
+    996  f534		       a9 ff		      lda	#$FF
+    997  f536		       a6 83		      ldx	paused
+    998  f538		       f0 02		      beq	.pc0
+    999  f53a		       a9 0f		      lda	#$0F
+   1000  f53c				   .pc0
+   1001  f53c		       85 e6		      sta	colMask
+   1002  f53e		       a5 82		      lda	state
+   1003  f540		       d0 0b		      bne	.pcs
+   1004  f542		       a5 88		      lda	hiH
+   1005  f544		       85 e7		      sta	temp
+   1006  f546		       a5 89		      lda	hiL
+   1007  f548		       85 e8		      sta	temp2
+   1008  f54a		       4c 55 f5 	      jmp	.pcm
+   1009  f54d				   .pcs
+   1010  f54d		       a5 86		      lda	scoreH
+   1011  f54f		       85 e7		      sta	temp
+   1012  f551		       a5 87		      lda	scoreL
+   1013  f553		       85 e8		      sta	temp2
+   1014  f555				   .pcm
+   1015  f555		       20 de f4 	      jsr	MakeScore
+   1016  f558		       a9 f9		      lda	#>GfxPage
+   1017  f55a		       85 dd		      sta	ptr0+1
+   1018  f55c		       85 df		      sta	ptr1+1
+   1019  f55e		       85 e1		      sta	pfptr+1
+   1020  f560		       a9 0e		      lda	#C_WHITE
+   1021  f562		       25 e6		      and	colMask
+   1022  f564		       85 e5		      sta	colSc
+   1023  f566		       a9 28		      lda	#C_HOUSE
+   1024  f568		       25 e6		      and	colMask
+   1025  f56a		       85 e4		      sta	colPF
+   1026  f56c		       a9 54		      lda	#C_FIELD
+   1027  f56e		       a6 82		      ldx	state
+   1028  f570		       e0 02		      cpx	#ST_OVER
+   1029  f572		       d0 10		      bne	.pc1
+   1030  f574		       a6 ae		      ldx	goTimer
+   1031  f576		       f0 0c		      beq	.pc1
+   1032  f578		       a5 80		      lda	frame
+   1033  f57a		       29 08		      and	#8
+   1034  f57c		       f0 04		      beq	.pc2
+   1035  f57e		       a9 62		      lda	#C_GOF
+   1036  f580		       d0 02		      bne	.pc1
+   1037  f582				   .pc2
+   1038  f582		       a9 54		      lda	#C_FIELD
+   1039  f584				   .pc1
+   1040  f584		       25 e6		      and	colMask
+   1041  f586				  -	      IF	TV = 3
+   1042  f586				  -	      ldx	paused
+   1043  f586				  -	      beq	.pc3
+   1044  f586				  -	      lda	#0
+   1045  f586				  -.pc3
+   1046  f586					      ENDIF
+   1047  f586		       85 e3		      sta	colBK
+   1048  f588		       a5 82		      lda	state
+   1049  f58a		       d0 08		      bne	.lanes
+   1050  f58c		       a4 8b		      ldy	startLevel
+   1051  f58e		       b9 86 f8 	      lda	Mul5,y
+   1052  f591		       85 e7		      sta	temp
+   1053  f593		       60		      rts
+   1054  f594				   .lanes
+   1055  f594		       a2 04		      ldx	#4
+   1056  f596				   .lp
+   1057  f596		       a9 00		      lda	#<GBlank
+   1058  f598		       95 c3		      sta	lP0g,x
+   1059  f59a		       a9 00		      lda	#0
+   1060  f59c		       95 b9		      sta	lP0x,x
+   1061  f59e		       95 d7		      sta	lR0,x
+   1062  f5a0		       a9 64		      lda	#C_STAR
+   1063  f5a2		       25 e6		      and	colMask
+   1064  f5a4		       95 cd		      sta	lC0,x
+   1065  f5a6		       e4 90		      cpx	pLane
+   1066  f5a8		       d0 1c		      bne	.np
+   1067  f5aa		       a5 a6		      lda	plState
+   1068  f5ac		       f0 09		      beq	.star
+   1069  f5ae		       e4 a7		      cpx	plLane
+   1070  f5b0		       d0 05		      bne	.star
+   1071  f5b2		       a5 80		      lda	frame
+   1072  f5b4		       4a		      lsr
+   1073  f5b5		       b0 17		      bcs	.jar
+   1074  f5b7				   .star
+   1075  f5b7		       a9 1c		      lda	#<GStar
+   1076  f5b9		       95 c3		      sta	lP0g,x
+   1077  f5bb		       a5 8f		      lda	pX
+   1078  f5bd		       95 b9		      sta	lP0x,x
+   1079  f5bf		       a5 91		      lda	facing
+   1080  f5c1		       95 d7		      sta	lR0,x
+   1081  f5c3		       4c f2 f5 	      jmp	.p1
+   1082  f5c6				   .np
+   1083  f5c6		       a5 a6		      lda	plState
+   1084  f5c8		       f0 28		      beq	.p1
+   1085  f5ca		       e4 a7		      cpx	plLane
+   1086  f5cc		       d0 24		      bne	.p1
+   1087  f5ce				   .jar
+   1088  f5ce		       a9 38		      lda	#<GJar
+   1089  f5d0		       95 c3		      sta	lP0g,x
+   1090  f5d2		       a5 a8		      lda	plX
+   1091  f5d4		       95 b9		      sta	lP0x,x
+   1092  f5d6		       a9 00		      lda	#0
+   1093  f5d8		       95 d7		      sta	lR0,x
+   1094  f5da		       a9 86		      lda	#C_JAR
+   1095  f5dc		       a4 a6		      ldy	plState
+   1096  f5de		       c0 02		      cpy	#2
+   1097  f5e0		       d0 0c		      bne	.jc
+   1098  f5e2		       a5 80		      lda	frame
+   1099  f5e4		       29 04		      and	#4
+   1100  f5e6		       f0 04		      beq	.jc0
+   1101  f5e8		       a9 8a		      lda	#C_JARF
+   1102  f5ea		       d0 02		      bne	.jc
+   1103  f5ec				   .jc0
+   1104  f5ec		       a9 86		      lda	#C_JAR
+   1105  f5ee				   .jc
+   1106  f5ee		       25 e6		      and	colMask
+   1107  f5f0		       95 cd		      sta	lC0,x
+   1108  f5f2				   .p1
+   1109  f5f2		       b5 96		      lda	dX,x
+   1110  f5f4		       d0 0d		      bne	.dol
+   1111  f5f6		       a9 00		      lda	#<GBlank
+   1112  f5f8		       95 c8		      sta	lP1g,x
+   1113  f5fa		       a9 00		      lda	#0
+   1114  f5fc		       95 be		      sta	lP1x,x
+   1115  f5fe		       95 d2		      sta	lC1,x
+   1116  f600		       4c 25 f6 	      jmp	.ln
+   1117  f603				   .dol
+   1118  f603		       95 be		      sta	lP1x,x
+   1119  f605		       b5 9b		      lda	dE,x
+   1120  f607		       f0 08		      beq	.dd
+   1121  f609		       a9 8c		      lda	#<GBoom
+   1122  f60b		       95 c8		      sta	lP1g,x
+   1123  f60d		       a9 46		      lda	#C_BOOM
+   1124  f60f		       d0 10		      bne	.dc
+   1125  f611				   .dd
+   1126  f611		       a5 80		      lda	frame
+   1127  f613		       29 10		      and	#16
+   1128  f615		       f0 04		      beq	.d2
+   1129  f617		       a9 54		      lda	#<GDol1
+   1130  f619		       d0 02		      bne	.d3
+   1131  f61b				   .d2
+   1132  f61b		       a9 70		      lda	#<GDol2
+   1133  f61d				   .d3
+   1134  f61d		       95 c8		      sta	lP1g,x
+   1135  f61f		       a9 2c		      lda	#C_DOL
+   1136  f621				   .dc
+   1137  f621		       25 e6		      and	colMask
+   1138  f623		       95 d2		      sta	lC1,x
+   1139  f625				   .ln
+   1140  f625		       ca		      dex
+   1141  f626		       30 03		      bmi	.lpend
+   1142  f628		       4c 96 f5 	      jmp	.lp
+   1143  f62b				   .lpend
+   1144  f62b		       60		      rts
+   1145  f62c
+   1146  f700		       00 00 00 00*	      ALIGN	256
+   1147  f700				   ScoreArea
+   1148  f700					      SUBROUTINE
+   1149  f700		       85 02		      sta	WSYNC
+   1150  f702		       a9 00		      lda	#0
+   1151  f704		       85 09		      sta	COLUBK
+   1152  f706		       85 0a		      sta	CTRLPF
+   1153  f708		       85 0d		      sta	PF0
+   1154  f70a		       85 0e		      sta	PF1
+   1155  f70c		       85 0f		      sta	PF2
+   1156  f70e		       85 1b		      sta	GRP0
+   1157  f710		       85 1c		      sta	GRP1
+   1158  f712		       85 0b		      sta	REFP0
+   1159  f714		       85 0c		      sta	REFP1
+   1160  f716		       85 1d		      sta	ENAM0
+   1161  f718		       a9 05		      lda	#5
+   1162  f71a		       85 04		      sta	NUSIZ0
+   1163  f71c		       85 05		      sta	NUSIZ1
+   1164  f71e		       a5 e5		      lda	colSc
+   1165  f720		       85 06		      sta	COLUP0
+   1166  f722		       85 07		      sta	COLUP1
+   1167  f724		       85 02		      sta	WSYNC
+   1168  f726		       a9 38		      lda	#56
+      0  f728					      POSOBJ	HMP0, RESP0
+      1  f728		       38		      sec
+      2  f729		       e9 0f	   .div       sbc	#15
+      3  f72b		       b0 fc		      bcs	.div
+      4  f72d				  -	      if	>.div != >*
+      5  f72d				  -	      echo	"POSOBJ PAGE CROSS"
+      6  f72d				  -	      err
+      7  f72d					      endif
+      8  f72d		       49 07		      eor	#7
+      9  f72f		       0a		      asl
+     10  f730		       0a		      asl
+     11  f731		       0a		      asl
+     12  f732		       0a		      asl
+     13  f733		       85 20		      sta	HMP0
+     14  f735		       85 10		      sta	RESP0
+   1170  f737		       85 02		      sta	WSYNC
+   1171  f739		       a9 48		      lda	#72
+      0  f73b					      POSOBJ	HMP1, RESP1
+      1  f73b		       38		      sec
+      2  f73c		       e9 0f	   .div       sbc	#15
+      3  f73e		       b0 fc		      bcs	.div
+      4  f740				  -	      if	>.div != >*
+      5  f740				  -	      echo	"POSOBJ PAGE CROSS"
+      6  f740				  -	      err
+      7  f740					      endif
+      8  f740		       49 07		      eor	#7
+      9  f742		       0a		      asl
+     10  f743		       0a		      asl
+     11  f744		       0a		      asl
+     12  f745		       0a		      asl
+     13  f746		       85 21		      sta	HMP1
+     14  f748		       85 11		      sta	RESP1
+   1173  f74a		       85 02		      sta	WSYNC
+   1174  f74c		       85 2a		      sta	HMOVE
+   1175  f74e		       a0 00		      ldy	#0
+   1176  f750				   .sa
+   1177  f750		       85 02		      sta	WSYNC
+   1178  f752		       b9 af 00 	      lda	sg0,y
+   1179  f755		       85 1b		      sta	GRP0
+   1180  f757		       b9 b4 00 	      lda	sg1,y
+   1181  f75a		       85 1c		      sta	GRP1
+   1182  f75c		       85 02		      sta	WSYNC
+   1183  f75e		       c8		      iny
+   1184  f75f		       c0 05		      cpy	#5
+   1185  f761		       d0 ed		      bne	.sa
+   1186  f763		       85 02		      sta	WSYNC
+   1187  f765		       a9 00		      lda	#0
+   1188  f767		       85 1b		      sta	GRP0
+   1189  f769		       85 1c		      sta	GRP1
+   1190  f76b		       a0 0f		      ldy	#15
+   1191  f76d				   .sb
+   1192  f76d		       85 02		      sta	WSYNC
+   1193  f76f		       88		      dey
+   1194  f770		       d0 fb		      bne	.sb
+   1195  f772		       60		      rts
+   1196  f773
+   1197  f773				   GameKernel
+   1198  f773					      SUBROUTINE
+   1199  f773		       20 00 f7 	      jsr	ScoreArea
+   1200  f776		       85 02		      sta	WSYNC
+   1201  f778		       a5 e3		      lda	colBK
+   1202  f77a		       85 09		      sta	COLUBK
+   1203  f77c		       a5 e4		      lda	colPF
+   1204  f77e		       85 08		      sta	COLUPF
+   1205  f780		       a9 20		      lda	#$20
+   1206  f782		       85 04		      sta	NUSIZ0
+   1207  f784		       a9 00		      lda	#0
+   1208  f786		       85 05		      sta	NUSIZ1
+   1209  f788		       a2 00		      ldx	#0
+   1210  f78a				   .lane
+   1211  f78a		       85 02		      sta	WSYNC
+   1212  f78c		       b5 b9		      lda	lP0x,x
+      0  f78e					      POSOBJ	HMP0, RESP0
+      1  f78e		       38		      sec
+      2  f78f		       e9 0f	   .div       sbc	#15
+      3  f791		       b0 fc		      bcs	.div
+      4  f793				  -	      if	>.div != >*
+      5  f793				  -	      echo	"POSOBJ PAGE CROSS"
+      6  f793				  -	      err
+      7  f793					      endif
+      8  f793		       49 07		      eor	#7
+      9  f795		       0a		      asl
+     10  f796		       0a		      asl
+     11  f797		       0a		      asl
+     12  f798		       0a		      asl
+     13  f799		       85 20		      sta	HMP0
+     14  f79b		       85 10		      sta	RESP0
+   1214  f79d		       85 02		      sta	WSYNC
+   1215  f79f		       b5 be		      lda	lP1x,x
+      0  f7a1					      POSOBJ	HMP1, RESP1
+      1  f7a1		       38		      sec
+      2  f7a2		       e9 0f	   .div       sbc	#15
+      3  f7a4		       b0 fc		      bcs	.div
+      4  f7a6				  -	      if	>.div != >*
+      5  f7a6				  -	      echo	"POSOBJ PAGE CROSS"
+      6  f7a6				  -	      err
+      7  f7a6					      endif
+      8  f7a6		       49 07		      eor	#7
+      9  f7a8		       0a		      asl
+     10  f7a9		       0a		      asl
+     11  f7aa		       0a		      asl
+     12  f7ab		       0a		      asl
+     13  f7ac		       85 21		      sta	HMP1
+     14  f7ae		       85 11		      sta	RESP1
+   1217  f7b0		       85 02		      sta	WSYNC
+   1218  f7b2		       a5 93		      lda	shotX
+      0  f7b4					      POSOBJ	HMM0, RESM0
+      1  f7b4		       38		      sec
+      2  f7b5		       e9 0f	   .div       sbc	#15
+      3  f7b7		       b0 fc		      bcs	.div
+      4  f7b9				  -	      if	>.div != >*
+      5  f7b9				  -	      echo	"POSOBJ PAGE CROSS"
+      6  f7b9				  -	      err
+      7  f7b9					      endif
+      8  f7b9		       49 07		      eor	#7
+      9  f7bb		       0a		      asl
+     10  f7bc		       0a		      asl
+     11  f7bd		       0a		      asl
+     12  f7be		       0a		      asl
+     13  f7bf		       85 22		      sta	HMM0
+     14  f7c1		       85 12		      sta	RESM0
+   1220  f7c3		       85 02		      sta	WSYNC
+   1221  f7c5		       85 2a		      sta	HMOVE
+   1222  f7c7		       b5 cd		      lda	lC0,x
+   1223  f7c9		       85 06		      sta	COLUP0
+   1224  f7cb		       b5 d2		      lda	lC1,x
+   1225  f7cd		       85 07		      sta	COLUP1
+   1226  f7cf		       b5 d7		      lda	lR0,x
+   1227  f7d1		       85 0b		      sta	REFP0
+   1228  f7d3		       b5 c3		      lda	lP0g,x
+   1229  f7d5		       85 dc		      sta	ptr0
+   1230  f7d7		       b5 c8		      lda	lP1g,x
+   1231  f7d9		       85 de		      sta	ptr1
+   1232  f7db		       a9 00		      lda	#0
+   1233  f7dd		       e4 94		      cpx	shotLane
+   1234  f7df		       d0 02		      bne	.se
+   1235  f7e1		       a5 95		      lda	shotDir
+   1236  f7e3				   .se
+   1237  f7e3		       85 e2		      sta	shotEn
+   1238  f7e5		       a5 a5		      lda	houses
+   1239  f7e7		       3d 81 f8 	      and	LaneBit,x
+   1240  f7ea		       f0 04		      beq	.nh
+   1241  f7ec		       a9 a8		      lda	#<GHouse
+   1242  f7ee		       d0 02		      bne	.sh
+   1243  f7f0				   .nh
+   1244  f7f0		       a9 00		      lda	#<GBlank
+   1245  f7f2				   .sh
+   1246  f7f2		       85 e0		      sta	pfptr
+   1247  f7f4		       a0 1b		      ldy	#27
+   1248  f7f6				   .dl
+   1249  f7f6		       85 02		      sta	WSYNC
+   1250  f7f8		       b1 e0		      lda	(pfptr),y
+   1251  f7fa		       85 0d		      sta	PF0
+   1252  f7fc		       b1 dc		      lda	(ptr0),y
+   1253  f7fe		       85 1b		      sta	GRP0
+   1254  f800		       b1 de		      lda	(ptr1),y
+   1255  f802		       85 1c		      sta	GRP1
+   1256  f804		       b9 c4 f9 	      lda	GMis,y
+   1257  f807		       25 e2		      and	shotEn
+   1258  f809		       85 1d		      sta	ENAM0
+   1259  f80b		       a9 00		      lda	#0
+   1260  f80d		       85 0d		      sta	PF0
+   1261  f80f		       88		      dey
+   1262  f810		       10 e4		      bpl	.dl
+   1263  f812		       e8		      inx
+   1264  f813		       e0 05		      cpx	#5
+   1265  f815		       f0 03		      beq	.kend
+   1266  f817		       4c 8a f7 	      jmp	.lane
+   1267  f81a				   .kend
+   1268  f81a		       60		      rts
+   1269  f81b
+   1270  f81b				   TitleKernel
+   1271  f81b					      SUBROUTINE
+   1272  f81b		       20 00 f7 	      jsr	ScoreArea
+   1273  f81e		       85 02		      sta	WSYNC
+   1274  f820		       a9 d2		      lda	#C_TBG
+   1275  f822		       85 09		      sta	COLUBK
+   1276  f824		       a9 01		      lda	#1
+   1277  f826		       85 0a		      sta	CTRLPF
+   1278  f828		       a5 80		      lda	frame
+   1279  f82a		       29 20		      and	#32
+   1280  f82c		       f0 04		      beq	.tc0
+   1281  f82e		       a9 66		      lda	#C_STAR2
+   1282  f830		       d0 02		      bne	.tc
+   1283  f832				   .tc0
+   1284  f832		       a9 64		      lda	#C_STAR
+   1285  f834				   .tc
+   1286  f834		       85 08		      sta	COLUPF
+   1287  f836		       a0 10		      ldy	#16
+   1288  f838				   .t1
+   1289  f838		       85 02		      sta	WSYNC
+   1290  f83a		       88		      dey
+   1291  f83b		       d0 fb		      bne	.t1
+   1292  f83d		       a2 00		      ldx	#0
+   1293  f83f				   .tr
+   1294  f83f		       a0 07		      ldy	#7
+   1295  f841				   .tl
+   1296  f841		       85 02		      sta	WSYNC
+   1297  f843		       bd b8 f8 	      lda	StarPF,x
+   1298  f846		       85 0f		      sta	PF2
+   1299  f848		       88		      dey
+   1300  f849		       d0 f6		      bne	.tl
+   1301  f84b		       e8		      inx
+   1302  f84c		       e0 0e		      cpx	#14
+   1303  f84e		       d0 ef		      bne	.tr
+   1304  f850		       85 02		      sta	WSYNC
+   1305  f852		       a9 00		      lda	#0
+   1306  f854		       85 0f		      sta	PF2
+   1307  f856		       a0 0d		      ldy	#13
+   1308  f858				   .t2
+   1309  f858		       85 02		      sta	WSYNC
+   1310  f85a		       88		      dey
+   1311  f85b		       d0 fb		      bne	.t2
+   1312  f85d		       a0 00		      ldy	#0
+   1313  f85f		       a6 e7		      ldx	temp
+   1314  f861				   .lv
+   1315  f861		       85 02		      sta	WSYNC
+   1316  f863		       b9 44 fa 	      lda	LGlyph,y
+   1317  f866		       1d 12 fa 	      ora	DigLo,x
+   1318  f869		       85 1b		      sta	GRP0
+   1319  f86b		       85 02		      sta	WSYNC
+   1320  f86d		       e8		      inx
+   1321  f86e		       c8		      iny
+   1322  f86f		       c0 05		      cpy	#5
+   1323  f871		       d0 ee		      bne	.lv
+   1324  f873		       85 02		      sta	WSYNC
+   1325  f875		       a9 00		      lda	#0
+   1326  f877		       85 1b		      sta	GRP0
+   1327  f879		       a0 15		      ldy	#21
+   1328  f87b				   .t3
+   1329  f87b		       85 02		      sta	WSYNC
+   1330  f87d		       88		      dey
+   1331  f87e		       d0 fb		      bne	.t3
+   1332  f880		       60		      rts
+   1333  f881
+   1334  f881				   LaneBit
+   1335  f881		       01 02 04 08*	      .byte.b	1,2,4,8,16
+   1336  f886				   Mul5
+   1337  f886		       00 05 0a 0f*	      .byte.b	0,5,10,15,20,25,30,35,40,45
+   1338  f890				   SpeedTab
+   1339  f890				  -	      IF	HZ50 = 1
+   1340  f890				  -	      .byte	36,36,49,62,76,89,102,115,128,142
+   1341  f890					      ELSE
+   1342  f890		       3c 3c 52 68*	      .byte.b	60,60,82,104,126,148,170,192,214,236
+   1343  f89a					      ENDIF
+   1344  f89a				   SpawnBase
+   1345  f89a		       64 64 5a 50*	      .byte.b	[100*FPSN/6],[100*FPSN/6],[90*FPSN/6],[80*FPSN/6],[70*FPSN/6],[60*FPSN/6],[50*FPSN/6],[40*FPSN/6],[30*FPSN/6],[20*FPSN/6]
+   1346  f8a4				   PlBase
+   1347  f8a4		       80 80 78 6e*	      .byte.b	[128*FPSN/6],[128*FPSN/6],[120*FPSN/6],[110*FPSN/6],[100*FPSN/6],[90*FPSN/6],[80*FPSN/6],[70*FPSN/6],[60*FPSN/6],[50*FPSN/6]
+   1348  f8ae				   SabTab
+   1349  f8ae		       c8 c8 c0 b8*	      .byte.b	[200*FPSN/6],[200*FPSN/6],[192*FPSN/6],[184*FPSN/6],[176*FPSN/6],[168*FPSN/6],[160*FPSN/6],[152*FPSN/6],[144*FPSN/6],[136*FPSN/6]
+   1350  f8b8				   StarPF
+   1351  f8b8		       80 80 c0 c0*	      .byte.b	$80,$80,$C0,$C0,$FF,$FE,$F8,$F0,$F0,$78,$38,$1C,$0C,$02
+   1352  f8c6
+   1353  f900		       00 00 00 00*	      ALIGN	256
+   1354  f900				   GfxPage
+   1355  f900				   GBlank
+   1356  f900		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+   1357  f90e		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+   1358  f91c				   GStar
+   1359  f91c		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$C6,$C6,$6C,$6C,$38,$38,$7F,$7F
+   1360  f92a		       fe fe 38 38*	      .byte.b	$FE,$FE,$38,$38,$38,$38,$10,$10,$00,$00,$00,$00,$00,$00
+   1361  f938				   GJar
+   1362  f938		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$7E,$7E,$FF,$FF,$BD,$BD,$FF,$FF
+   1363  f946		       7e 7e 3c 3c*	      .byte.b	$7E,$7E,$3C,$3C,$7E,$7E,$7E,$7E,$00,$00,$00,$00,$00,$00
+   1364  f954				   GDol1
+   1365  f954		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$44,$44,$10,$10,$FC,$FC,$16,$16
+   1366  f962		       7c 7c d0 d0*	      .byte.b	$7C,$7C,$D0,$D0,$7E,$7E,$10,$10,$00,$00,$00,$00,$00,$00
+   1367  f970				   GDol2
+   1368  f970		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$28,$28,$10,$10,$FC,$FC,$16,$16
+   1369  f97e		       7c 7c d0 d0*	      .byte.b	$7C,$7C,$D0,$D0,$7E,$7E,$10,$10,$00,$00,$00,$00,$00,$00
+   1370  f98c				   GBoom
+   1371  f98c		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$92,$92,$54,$54,$38,$38
+   1372  f99a		       fe fe 38 38*	      .byte.b	$FE,$FE,$38,$38,$54,$54,$92,$92,$00,$00,$00,$00,$00,$00
+   1373  f9a8				   GHouse
+   1374  f9a8		       00 00 b0 b0*	      .byte.b	$00,$00,$B0,$B0,$B0,$B0,$B0,$B0,$F0,$F0,$F0,$F0,$D0,$D0
+   1375  f9b6		       d0 d0 f0 f0*	      .byte.b	$D0,$D0,$F0,$F0,$F0,$F0,$F0,$F0,$60,$60,$60,$00,$00,$00
+   1376  f9c4				   GMis
+   1377  f9c4		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$02,$02
+   1378  f9d2		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+   1379  f9e0				   DigHi
+   1380  f9e0		       e0 a0 a0 a0*	      .byte.b	$E0,$A0,$A0,$A0,$E0,$40,$C0,$40,$40,$E0
+   1381  f9ea		       e0 20 e0 80*	      .byte.b	$E0,$20,$E0,$80,$E0,$E0,$20,$E0,$20,$E0
+   1382  f9f4		       a0 a0 e0 20*	      .byte.b	$A0,$A0,$E0,$20,$20,$E0,$80,$E0,$20,$E0
+   1383  f9fe		       e0 80 e0 a0*	      .byte.b	$E0,$80,$E0,$A0,$E0,$E0,$20,$20,$20,$20
+   1384  fa08		       e0 a0 e0 a0*	      .byte.b	$E0,$A0,$E0,$A0,$E0,$E0,$A0,$E0,$20,$E0
+   1385  fa12				   DigLo
+   1386  fa12		       0e 0a 0a 0a*	      .byte.b	$0E,$0A,$0A,$0A,$0E,$04,$0C,$04,$04,$0E
+   1387  fa1c		       0e 02 0e 08*	      .byte.b	$0E,$02,$0E,$08,$0E,$0E,$02,$0E,$02,$0E
+   1388  fa26		       0a 0a 0e 02*	      .byte.b	$0A,$0A,$0E,$02,$02,$0E,$08,$0E,$02,$0E
+   1389  fa30		       0e 08 0e 0a*	      .byte.b	$0E,$08,$0E,$0A,$0E,$0E,$02,$02,$02,$02
+   1390  fa3a		       0e 0a 0e 0a*	      .byte.b	$0E,$0A,$0E,$0A,$0E,$0E,$0A,$0E,$02,$0E
+   1391  fa44				   LGlyph
+   1392  fa44		       80 80 80 80*	      .byte.b	$80,$80,$80,$80,$E0
+ ROM free: 1459 bytes
+   1393  fa44					      echo	"ROM free:", [$FFFC - *]d, "bytes"
+   1394  fa49
+   1395  fffc					      ORG	$FFFC
+   1396  fffc		       00 f0		      .word.w	Reset
+   1397  fffe		       00 f0		      .word.w	Reset

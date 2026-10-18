@@ -3,6 +3,73 @@
 NO_ILLEGAL_OPCODES = 1
 	include "macro.h"
 
+	IFNCONST TV
+TV = 0
+	ENDIF
+	IFNCONST NOPAUSE
+NOPAUSE = 0
+	ENDIF
+	IF TV = 1 || TV = 3
+HZ50 = 1
+FPSN = 5
+VBT = 57
+OST = 43
+PADL = 18
+SHOTSPD = 5
+LREP = 8
+PLWALK = 77
+DIFFADD = 24
+	ELSE
+HZ50 = 0
+FPSN = 6
+VBT = 44
+OST = 36
+PADL = 0
+SHOTSPD = 4
+LREP = 10
+PLWALK = 64
+DIFFADD = 40
+	ENDIF
+	IF TV = 0
+C_STAR = $44
+C_STAR2 = $46
+C_JAR = $58
+C_JARF = $5E
+C_DOL = $1E
+C_BOOM = $36
+C_HOUSE = $F6
+C_FIELD = $C4
+C_GOF = $42
+C_WHITE = $0E
+C_TBG = $82
+	ENDIF
+	IF TV = 1 || TV = 2
+C_STAR = $64
+C_STAR2 = $66
+C_JAR = $86
+C_JARF = $8A
+C_DOL = $2C
+C_BOOM = $46
+C_HOUSE = $28
+C_FIELD = $54
+C_GOF = $62
+C_WHITE = $0E
+C_TBG = $D2
+	ENDIF
+	IF TV = 3
+C_STAR = $04
+C_STAR2 = $04
+C_JAR = $06
+C_JARF = $0E
+C_DOL = $0C
+C_BOOM = $0E
+C_HOUSE = $0A
+C_FIELD = $08
+C_GOF = $04
+C_WHITE = $0E
+C_TBG = $02
+	ENDIF
+
 ST_TITLE = 0
 ST_PLAY  = 1
 ST_OVER  = 2
@@ -65,6 +132,8 @@ temp       ds 1
 temp2      ds 1
 overrun    ds 1
 prevV      ds 1
+plAcc      ds 1
+f5         ds 1
 RAMEND
 	echo "RAM used:", [RAMEND - $80]d, "bytes"
 
@@ -109,13 +178,19 @@ MainLoop
 	sta WSYNC
 	sta VBLANK
 	sta VSYNC
+	IF HZ50 = 1
+	lda #VBT
+	sta TIM64T
+	ENDIF
 	sta WSYNC
 	sta WSYNC
 	sta WSYNC
 	lda #0
 	sta VSYNC
-	lda #44
+	IF HZ50 = 0
+	lda #VBT
 	sta TIM64T
+	ENDIF
 	jsr Precompute
 	lda #0
 	sta COLUBK
@@ -127,6 +202,13 @@ VbWait
 	bne VbWait
 	sta WSYNC
 	sta VBLANK
+	IF PADL > 0
+	ldy #PADL
+.pt
+	sta WSYNC
+	dey
+	bne .pt
+	ENDIF
 	lda state
 	bne .gk
 	jsr TitleKernel
@@ -135,9 +217,24 @@ VbWait
 	jsr GameKernel
 .os
 	sta WSYNC
+	IF PADL > 0
+	lda #0
+	sta COLUBK
+	sta PF0
+	sta PF1
+	sta PF2
+	sta GRP0
+	sta GRP1
+	sta ENAM0
+	ldy #PADL
+.pb
+	sta WSYNC
+	dey
+	bne .pb
+	ENDIF
 	lda #2
 	sta VBLANK
-	lda #36
+	lda #OST
 	sta TIM64T
 	jsr Switches
 	jsr Update
@@ -198,7 +295,9 @@ NewGame
 	asl
 	asl
 	asl
+	IF HZ50 = 0
 	asl
+	ENDIF
 	clc
 	adc dT,x
 	sta dT,x
@@ -245,7 +344,7 @@ SetSpeed
 	bit SWCHB
 	bvc .ss
 	clc
-	adc #40
+	adc #DIFFADD
 	bcc .ss
 	lda #255
 .ss
@@ -259,7 +358,7 @@ SabTime
 	bit SWCHB
 	bpl .sb
 	sec
-	sbc #60
+	sbc #[60*FPSN/6]
 .sb
 	sta plTimer
 	rts
@@ -292,6 +391,9 @@ Switches
 	eor prevSW
 	and #$08
 	beq .nobw
+	IF NOPAUSE = 1
+	jmp .nobw
+	ENDIF
 	lda state
 	cmp #ST_PLAY
 	bne .nobw
@@ -327,6 +429,13 @@ Update
 	SUBROUTINE
 	jsr Rand
 	inc frame
+	IF HZ50 = 1
+	dec f5
+	bpl .f5ok
+	lda #4
+	sta f5
+.f5ok
+	ENDIF
 	lda INPT4
 	and #$80
 	sta temp
@@ -369,6 +478,14 @@ Play
 	cmp #60
 	bcs .rf
 	inc pX
+	IF HZ50 = 1
+	lda f5
+	bne .rf
+	lda pX
+	cmp #60
+	bcs .rf
+	inc pX
+	ENDIF
 .rf
 	lda #0
 	sta facing
@@ -380,6 +497,14 @@ Play
 	cmp #21
 	bcc .lf
 	dec pX
+	IF HZ50 = 1
+	lda f5
+	bne .lf
+	lda pX
+	cmp #21
+	bcc .lf
+	dec pX
+	ENDIF
 .lf
 	lda #8
 	sta facing
@@ -400,7 +525,7 @@ Play
 	dec laneRep
 	jmp .vdone
 .vmove
-	lda #10
+	lda #LREP
 	sta laneRep
 	lda temp
 	and #$10
@@ -448,7 +573,7 @@ Play
 	bmi .sleft
 	lda shotX
 	clc
-	adc #4
+	adc #SHOTSPD
 	sta shotX
 	cmp #146
 	bcc .noshot
@@ -456,7 +581,7 @@ Play
 .sleft
 	lda shotX
 	sec
-	sbc #4
+	sbc #SHOTSPD
 	bcc .shotoff
 	sta shotX
 	cmp #4
@@ -466,13 +591,22 @@ Play
 	sta shotDir
 	sta shotX
 .noshot
+	lda #0
+	sta temp
 	lda acc
 	clc
 	adc speed
+	IF HZ50 = 1
+	bcc .ac1
+	inc temp
+	clc
+.ac1
+	adc speed
+	ENDIF
 	sta acc
-	lda #0
-	rol
-	sta temp
+	bcc .ac2
+	inc temp
+.ac2
 	ldx #4
 .dl
 	lda dE,x
@@ -500,6 +634,10 @@ Play
 .dact
 	lda temp
 	beq .dnext
+	lsr
+	beq .dmv1
+	dec dX,x
+.dmv1
 	dec dX,x
 	lda dX,x
 	cmp #17
@@ -590,7 +728,9 @@ Play
 	lda plState
 	bne .pa
 	dec plTimer
-	bne .pdone
+	beq .pspawn
+	jmp .pdone
+.pspawn
 	jsr Rand
 	and #7
 	cmp #5
@@ -610,7 +750,7 @@ Play
 .p4
 	dey
 	bne .p2
-	lda #30
+	lda #[30*FPSN/6]
 	sta plTimer
 	bne .pdone
 .p3
@@ -627,16 +767,18 @@ Play
 	bne .pb
 	lda #0
 	sta plState
-	lda #40
+	lda #[40*FPSN/6]
 	sta plTimer
 	bne .pdone
 .pb
 	lda plState
 	cmp #1
 	bne .ps
-	lda frame
-	and #3
-	bne .pdone
+	lda plAcc
+	clc
+	adc #PLWALK
+	sta plAcc
+	bcc .pdone
 	dec plX
 	lda plX
 	cmp #18
@@ -664,7 +806,7 @@ Play
 	bne .alive
 	lda #ST_OVER
 	sta state
-	lda #120
+	lda #[120*FPSN/6]
 	sta goTimer
 	lda #0
 	sta shotDir
@@ -875,13 +1017,13 @@ Precompute
 	sta ptr0+1
 	sta ptr1+1
 	sta pfptr+1
-	lda #$0E
+	lda #C_WHITE
 	and colMask
 	sta colSc
-	lda #$F6
+	lda #C_HOUSE
 	and colMask
 	sta colPF
-	lda #$C4
+	lda #C_FIELD
 	ldx state
 	cpx #ST_OVER
 	bne .pc1
@@ -890,12 +1032,18 @@ Precompute
 	lda frame
 	and #8
 	beq .pc2
-	lda #$42
+	lda #C_GOF
 	bne .pc1
 .pc2
-	lda #$C4
+	lda #C_FIELD
 .pc1
 	and colMask
+	IF TV = 3
+	ldx paused
+	beq .pc3
+	lda #0
+.pc3
+	ENDIF
 	sta colBK
 	lda state
 	bne .lanes
@@ -911,7 +1059,7 @@ Precompute
 	lda #0
 	sta lP0x,x
 	sta lR0,x
-	lda #$44
+	lda #C_STAR
 	and colMask
 	sta lC0,x
 	cpx pLane
@@ -943,17 +1091,17 @@ Precompute
 	sta lP0x,x
 	lda #0
 	sta lR0,x
-	lda #$58
+	lda #C_JAR
 	ldy plState
 	cpy #2
 	bne .jc
 	lda frame
 	and #4
 	beq .jc0
-	lda #$5E
+	lda #C_JARF
 	bne .jc
 .jc0
-	lda #$58
+	lda #C_JAR
 .jc
 	and colMask
 	sta lC0,x
@@ -972,7 +1120,7 @@ Precompute
 	beq .dd
 	lda #<GBoom
 	sta lP1g,x
-	lda #$36
+	lda #C_BOOM
 	bne .dc
 .dd
 	lda frame
@@ -984,7 +1132,7 @@ Precompute
 	lda #<GDol2
 .d3
 	sta lP1g,x
-	lda #$1E
+	lda #C_DOL
 .dc
 	and colMask
 	sta lC1,x
@@ -1123,17 +1271,17 @@ TitleKernel
 	SUBROUTINE
 	jsr ScoreArea
 	sta WSYNC
-	lda #$82
+	lda #C_TBG
 	sta COLUBK
 	lda #1
 	sta CTRLPF
 	lda frame
 	and #32
 	beq .tc0
-	lda #$46
+	lda #C_STAR2
 	bne .tc
 .tc0
-	lda #$42
+	lda #C_STAR
 .tc
 	sta COLUPF
 	ldy #16
@@ -1188,13 +1336,17 @@ LaneBit
 Mul5
 	.byte 0,5,10,15,20,25,30,35,40,45
 SpeedTab
+	IF HZ50 = 1
+	.byte 36,36,49,62,76,89,102,115,128,142
+	ELSE
 	.byte 60,60,82,104,126,148,170,192,214,236
+	ENDIF
 SpawnBase
-	.byte 100,100,90,80,70,60,50,40,30,20
+	.byte [100*FPSN/6],[100*FPSN/6],[90*FPSN/6],[80*FPSN/6],[70*FPSN/6],[60*FPSN/6],[50*FPSN/6],[40*FPSN/6],[30*FPSN/6],[20*FPSN/6]
 PlBase
-	.byte 128,128,120,110,100,90,80,70,60,50
+	.byte [128*FPSN/6],[128*FPSN/6],[120*FPSN/6],[110*FPSN/6],[100*FPSN/6],[90*FPSN/6],[80*FPSN/6],[70*FPSN/6],[60*FPSN/6],[50*FPSN/6]
 SabTab
-	.byte 200,200,192,184,176,168,160,152,144,136
+	.byte [200*FPSN/6],[200*FPSN/6],[192*FPSN/6],[184*FPSN/6],[176*FPSN/6],[168*FPSN/6],[160*FPSN/6],[152*FPSN/6],[144*FPSN/6],[136*FPSN/6]
 StarPF
 	.byte $80,$80,$C0,$C0,$FF,$FE,$F8,$F0,$F0,$78,$38,$1C,$0C,$02
 

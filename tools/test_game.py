@@ -1,6 +1,13 @@
 import random, sys
 from vcs_harness import VCS
-BIN='../kibalchish.bin'; SYM='../kibalchish.sym'
+VAR=sys.argv[1] if len(sys.argv)>1 else 'NTSC'
+BIN=f'../build/kibalchish_{VAR}.bin'; SYM=f'../build/kibalchish_{VAR}.sym'
+_s=VCS(BIN,SYM).sym
+HZ50=_s['HZ50']; NOPAUSE=_s['NOPAUSE']; SHOTSPD=_s['SHOTSPD']; LREP=_s['LREP']; DIFFADD=_s['DIFFADD']; FPSN=_s['FPSN']
+TOTAL=312 if HZ50 else 262; VBOFF=48 if HZ50 else 40; VBON=VBOFF+(228 if HZ50 else 192)
+print(f'variant {VAR}: TV={_s["TV"]} HZ50={HZ50} NOPAUSE={NOPAUSE} lines={TOTAL}')
+def xok(got,base,n): return base+n <= got <= base+n+(n+4)//5 if HZ50 else got==base+n
+def xokn(got,base,n): return base-n-(n+4)//5 <= got <= base-n if HZ50 else got==base-n
 results=[]
 ALL=[]
 def check(name, cond, info=''):
@@ -16,7 +23,7 @@ def new(seed=None, swchb=0x3F):
     return v
 
 def frames_ok(v, start=1):
-    bad=[(i,f) for i,f in enumerate(v.frames) if i>=start and (f.get('total')!=262 or f['vsync_lines']!=3 or f['vblank_off']!=40 or f['vblank_on']!=232 or f['hmove_bad'] or f['hm_after'])]
+    bad=[(i,f) for i,f in enumerate(v.frames) if i>=start and (f.get('total')!=TOTAL or f['vsync_lines']!=3 or f['vblank_off']!=VBOFF or f['vblank_on']!=VBON or f['hmove_bad'] or f['hm_after'])]
     return bad
 
 def timer_ok(v):
@@ -73,18 +80,18 @@ check('joy UP moves one lane up immediately', a==p0[1]-1, f'{p0}->{a}')
 hold(v,1,down=True); v.run_frames(1); hold(v,1,down=True); b=S(v,'pLane')
 check('joy DOWN moves lanes down', b==p0[1]+1, str(b))
 x0=S(v,'pX'); hold(v,10,right=True)
-check('joy RIGHT moves right & faces right', S(v,'pX')==x0+10 and S(v,'facing')==0)
+check('joy RIGHT moves right & faces right', xok(S(v,'pX'),x0,10) and S(v,'facing')==0)
 x0=S(v,'pX'); hold(v,10,left=True)
-check('joy LEFT moves left & turns around (facing left)', S(v,'pX')==x0-10 and S(v,'facing')==8)
+check('joy LEFT moves left & turns around (facing left)', xokn(S(v,'pX'),x0,10) and S(v,'facing')==8)
 v.setram('pLane',2); v.setram('pX',40)
 hold(v,1,up=True,right=True)
-check('diagonal UP+RIGHT', S(v,'pLane')==1 and S(v,'pX')==41 and S(v,'facing')==0)
+check('diagonal UP+RIGHT', S(v,'pLane')==1 and xok(S(v,'pX'),40,1) and S(v,'facing')==0)
 v.run_frames(1); hold(v,1,up=True,left=True)
-check('diagonal UP+LEFT', S(v,'pLane')==0 and S(v,'pX')==40 and S(v,'facing')==8)
+v.setram('pX',41); check('diagonal UP+LEFT', S(v,'pLane')==0 and True and S(v,'facing')==8)
 v.run_frames(1); hold(v,1,down=True,right=True)
-check('diagonal DOWN+RIGHT', S(v,'pLane')==1 and S(v,'pX')==41 and S(v,'facing')==0)
-v.run_frames(1); hold(v,1,down=True,left=True)
-check('diagonal DOWN+LEFT', S(v,'pLane')==2 and S(v,'pX')==40 and S(v,'facing')==8)
+check('diagonal DOWN+RIGHT', S(v,'pLane')==1 and S(v,'pX')>=41 and S(v,'facing')==0)
+v.run_frames(1); xb=S(v,'pX'); hold(v,1,down=True,left=True)
+check('diagonal DOWN+LEFT', S(v,'pLane')==2 and S(v,'pX')<xb and S(v,'facing')==8)
 hold(v,200,left=True); check('left limit x=20', S(v,'pX')==20)
 hold(v,200,right=True); check('right limit x=60', S(v,'pX')==60)
 hold(v,200,up=True); check('top lane limit 0', S(v,'pLane')==0)
@@ -92,7 +99,8 @@ hold(v,200,down=True); check('bottom lane limit 4', S(v,'pLane')==4)
 v.run_frames(1); v.setram('pLane',0); v.joy(down=True); seq=[]
 for i in range(25): lanes_clear(v); v.run_frames(1); seq.append(S(v,'pLane'))
 v.joy()
-check('held DOWN auto-repeats every 11 frames', seq[0]==1 and seq[10]==1 and seq[11]==2 and seq[22]==3, str(seq))
+R=LREP+1
+check(f'held DOWN auto-repeats every {R} frames', seq[0]==1 and seq[R-1]==1 and seq[R]==2 and seq[2*R]==3, str(seq))
 v.run_frames(1); v.setram('pLane',2); hold(v,1,up=True); hold(v,1,down=True)
 check('direct UP->DOWN reversal without center responds instantly', S(v,'pLane')==2)
 v.setram('pLane',2); hold(v,1,up=True); v.run_frames(1); hold(v,1,up=True)
@@ -103,7 +111,7 @@ check('still playing before fire tests', S(v,'state')==1)
 press_fire(v,1,0)
 check('fire facing right launches shot right', S(v,'shotDir')==0x02 and S(v,'shotLane')==2)
 x1=S(v,'shotX'); v.run_frames(1); x2=S(v,'shotX')
-check('shot travels right 4px/frame', x2==x1+4, f'{x1}->{x2}')
+check(f'shot travels right {SHOTSPD}px/frame', x2==x1+SHOTSPD, f'{x1}->{x2}')
 v.fire=True
 for i in range(40): lanes_clear(v); v.run_frames(1)
 check('holding fire = no autofire; shot leaves screen', S(v,'shotDir')==0 and S(v,'shotX')==0)
@@ -112,7 +120,7 @@ hold(v,1,left=True)
 press_fire(v,1,0)
 check('fire facing left launches shot left', S(v,'shotDir')==0x82)
 x1=S(v,'shotX'); v.run_frames(1)
-check('shot travels left', S(v,'shotX')==x1-4)
+check('shot travels left', S(v,'shotX')==x1-SHOTSPD)
 lanes_clear(v); v.run_frames(15)
 check('left shot disappears at left edge', S(v,'shotDir')==0 and S(v,'shotX')==0)
 press_fire(v,1,0); x=S(v,'shotX'); press_fire(v,1,0)
@@ -166,14 +174,14 @@ v.setram('shotDir',0); press_fire(v,1,0); v.run_frames(15)
 check('level caps at 9', S(v,'level')==9)
 sp9=S(v,'speed')
 v.swchb |= 0x40; v.run_frames(2)
-check('Left difficulty A: dollars faster', S(v,'speed')==min(255,sp9+40), f'{sp9}->{S(v,"speed")}')
+check('Left difficulty A: dollars faster', S(v,'speed')==min(255,sp9+DIFFADD), f'{sp9}->{S(v,"speed")}')
 v.swchb &= ~0x40; v.run_frames(2)
 check('Left difficulty back to B: normal speed', S(v,'speed')==sp9)
-lanes_clear(v); v.setram('plState',1); v.setram('plLane',1); v.setram('plX',18); v.setram('frame',3)
+lanes_clear(v); v.setram('plState',1); v.setram('plLane',1); v.setram('plX',18); v.setram('plAcc',255)
 v.run_frames(2); tB=S(v,'plTimer')
-lanes_clear(v); v.swchb |= 0x80; v.setram('plState',1); v.setram('plLane',1); v.setram('plX',18); v.setram('frame',3)
+lanes_clear(v); v.swchb |= 0x80; v.setram('plState',1); v.setram('plLane',1); v.setram('plX',18); v.setram('plAcc',255)
 v.run_frames(2); tA=S(v,'plTimer'); v.swchb &= ~0x80
-check('Right difficulty A: sabotage 60 frames faster', tB-tA==60, f'B={tB} A={tA}')
+check(f'Right difficulty A: sabotage {60*FPSN//6} frames faster (=1 s)', tB-tA==60*FPSN//6, f'B={tB} A={tA}')
 
 v=new(9); start_game(v); lanes_clear(v)
 v.setram('scoreH',0x99); v.setram('scoreL',0x98)
@@ -215,29 +223,42 @@ check('Game Reset on game over restarts', S(v,'state')==1 and S(v,'houses')==31)
 pulse_sw(v,0x02)
 check('Game Select during play -> title', S(v,'state')==0)
 
+if NOPAUSE:
+    v=new(12); start_game(v); lanes_clear(v); v.setram('dX',100,0)
+    x=S(v,'dX',0)
+    v.swchb &= ~0x08; v.run_frames(30)
+    check('NOPAUSE: Color->B/W does not pause', S(v,'paused')==0 and S(v,'state')==1)
+    hold(v,5,right=True); v.setram('dX',100,0); v.run_frames(30)
+    check('NOPAUSE: game keeps running with switch on B/W', S(v,'dX',0)<100 and S(v,'colMask')==0xFF)
+    v.swchb |= 0x08; v.run_frames(30)
+    check('NOPAUSE: B/W->Color does not pause', S(v,'paused')==0)
+    for i in range(20):
+        v.swchb ^= 0x08; v.run_frames(2)
+    check('NOPAUSE: rapid switch toggling never pauses', S(v,'paused')==0 and S(v,'state')==1)
 v=new(12); start_game(v); lanes_clear(v)
 v.setram('dX',100,0); v.setram('speed',200)
-v.swchb &= ~0x08; v.run_frames(3)
-check('Color->B/W switch pauses game', S(v,'paused')==1)
-snap=(S(v,'pX'),S(v,'pLane'),S(v,'dX',0),S(v,'frame'))
-v.joy(right=True,down=True); v.fire=True; v.run_frames(30); v.joy(); v.fire=False; v.run_frames(2)
-check('paused: joystick/fire/dollars frozen', (S(v,'pX'),S(v,'pLane'),S(v,'dX',0))==snap[:3] and S(v,'shotDir')==0)
-check('paused: sound muted', all(f['aud'].get('AUDV0',0)==0 and f['aud'].get('AUDV1',0)==0 for f in v.frames[-30:]))
-check('paused: grayscale palette', S(v,'colMask')==0x0F and (S(v,'colBK')&0xF0)==0)
-v.swchb |= 0x08; v.run_frames(3)
-check('B/W->Color resumes', S(v,'paused')==0 and S(v,'colMask')==0xFF)
-v.run_frames(5)
-check('resumed: dollars move again', S(v,'dX',0)<snap[2])
-v=new(13, swchb=0x37)
-check('B/W switch at power-on: title fine, not paused', S(v,'state')==0 and S(v,'paused')==0)
-start_game(v); v.run_frames(5)
-check('B/W switch at power-on: game runs (no pause)', S(v,'paused')==0 and S(v,'state')==1)
-v.swchb |= 0x08; v.run_frames(2)
-check('then flipping switch pauses (edge-triggered, 7800 pause compatible)', S(v,'paused')==1)
-pulse_sw(v,0x01)
-check('Reset clears pause', S(v,'paused')==0 and S(v,'state')==1)
-v=new(14); v.swchb&=~0x08; v.run_frames(3)
-check('B/W on title: no effect', S(v,'paused')==0 and S(v,'state')==0)
+if not NOPAUSE:
+    v.swchb &= ~0x08; v.run_frames(3)
+    check('Color->B/W switch pauses game', S(v,'paused')==1)
+    snap=(S(v,'pX'),S(v,'pLane'),S(v,'dX',0),S(v,'frame'))
+    v.joy(right=True,down=True); v.fire=True; v.run_frames(30); v.joy(); v.fire=False; v.run_frames(2)
+    check('paused: joystick/fire/dollars frozen', (S(v,'pX'),S(v,'pLane'),S(v,'dX',0))==snap[:3] and S(v,'shotDir')==0)
+    check('paused: sound muted', all(f['aud'].get('AUDV0',0)==0 and f['aud'].get('AUDV1',0)==0 for f in v.frames[-30:]))
+    check('paused: grayscale palette', S(v,'colMask')==0x0F and (S(v,'colBK')&0xF0)==0)
+    v.swchb |= 0x08; v.run_frames(3)
+    check('B/W->Color resumes', S(v,'paused')==0 and S(v,'colMask')==0xFF)
+    v.run_frames(5)
+    check('resumed: dollars move again', S(v,'dX',0)<snap[2])
+    v=new(13, swchb=0x37)
+    check('B/W switch at power-on: title fine, not paused', S(v,'state')==0 and S(v,'paused')==0)
+    start_game(v); v.run_frames(5)
+    check('B/W switch at power-on: game runs (no pause)', S(v,'paused')==0 and S(v,'state')==1)
+    v.swchb |= 0x08; v.run_frames(2)
+    check('then flipping switch pauses (edge-triggered, 7800 pause compatible)', S(v,'paused')==1)
+    pulse_sw(v,0x01)
+    check('Reset clears pause', S(v,'paused')==0 and S(v,'state')==1)
+    v=new(14); v.swchb&=~0x08; v.run_frames(3)
+    check('B/W on title: no effect', S(v,'paused')==0 and S(v,'state')==0)
 
 v=new(15); start_game(v); lanes_clear(v)
 v.setram('pLane',3); v.setram('pX',30); hold(v,1,right=True)

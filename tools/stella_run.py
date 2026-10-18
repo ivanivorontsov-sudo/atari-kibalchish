@@ -1,24 +1,27 @@
 import subprocess, os, glob, shutil, time, sys, re
 ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+VAR=os.environ.get('VAR','NTSC')
+BINN=f'kibalchish_{VAR}.bin'
 sym={}
-for l in open(os.path.join(ROOT,'kibalchish.sym')):
+for l in open(os.path.join(ROOT,'build',f'kibalchish_{VAR}.sym')):
     p=l.split()
     if len(p)>=2:
         try: sym[p[0]]=int(p[1],16)
         except: pass
 ML='%x'%sym['MainLoop']
 def a(n,o=0): return '%x'%(sym[n]+o)
-W='/tmp/stella_run'; shutil.rmtree(W,ignore_errors=True); os.makedirs(W)
-shutil.copy(os.path.join(ROOT,'kibalchish.bin'),W)
+W='/tmp/stella_run_'+VAR; shutil.rmtree(W,ignore_errors=True); os.makedirs(W)
+shutil.copy(os.path.join(ROOT,'build',BINN),W)
+NOP=sym['NOPAUSE']; TOT=312 if sym['HZ50'] else 262
 cmds=[]
 header=[]
-header.append(f'breakIf {{pc=={ML} && _scanEnd!=#262 && _fCount>#2}}')
+header.append(f'breakIf {{pc=={ML} && _scanEnd!=#{TOT} && _fCount>#2}}')
 asserts=[]
 def assert_at(desc, cond):
     asserts.append(desc)
     k=len(asserts)
-    header.append(f'breakIf {{pc=={ML} && *ec==#{k} && !({cond})}}')
-    cmds.append(f'ram ec {k:02x}'); fr(2); cmds.append('ram ec 00')
+    header.append(f'breakIf {{pc=={ML} && *f0==#{k} && !({cond})}}')
+    cmds.append(f'ram f0 {k:02x}'); fr(2); cmds.append('ram f0 00')
 fc=[0]
 snaps=[]
 def fr(n):
@@ -56,7 +59,7 @@ assert_at('NEGATIVE CONTROL (must be logged)', f'*{a("state")}==#7')
 calm(); ram('dX',90,0); ram('dE',0,0); ram('pLane',0); ram('pX',40); joy('Right',0); fr(1); joy('Right',1)
 joy('Fire',0); fr(12); snap('07_dollar_explosion'); joy('Fire',1); fr(30)
 calm(); ram('plState',1); ram('plLane',3); ram('plX',45); ram('dX',100,1); sw('37'); fr(5); snap('08_paused_bw')
-assert_at('paused', f'*{a("paused")}==#1')
+assert_at('paused' if not NOP else 'NOPAUSE: B/W switch does not pause', f'*{a("paused")}==#{0 if NOP else 1}')
 fr(30); sw('3f'); fr(5); calm()
 assert_at('unpaused', f'*{a("paused")}==#0')
 ram('houses',1); ram('dX',20,0); ram('dE',0,0); ram('plState',0); fr(120)
@@ -75,7 +78,7 @@ fr(30); snap('10_title_hiscore')
 total=fc[0]
 open(os.path.expanduser('~/.config/stella/autoexec.script'),'w').write('\n'.join(header+cmds)+'\n')
 env=dict(os.environ)
-p=subprocess.Popen(['timeout',str(int(sys.argv[1]) if len(sys.argv)>1 else 25),'xvfb-run','-a','stella','-debug','-dbg.logbreaks','1','-loglevel','2','-logtoconsole','1','-snapsavedir',W,'-dev.settings',os.environ.get('DEVSET','0'),os.path.join(W,'kibalchish.bin')],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,cwd=W)
+p=subprocess.Popen(['timeout',str(int(sys.argv[1]) if len(sys.argv)>1 else 25),'xvfb-run','-a','stella','-debug','-dbg.logbreaks','1','-loglevel','2','-logtoconsole','1','-snapsavedir',W,'-dev.settings',os.environ.get('DEVSET','0'),os.path.join(W,BINN)],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,cwd=W)
 out=p.communicate()[0]
 subprocess.run(['pkill','-f','stella -debug'])
 cbp=[l for l in out.splitlines() if l.startswith('CBP')]
@@ -90,7 +93,9 @@ print('negative-control logged:', negi in idx)
 real=[l for l,i in zip(cbp,idx) if i!=negi]
 print('REAL violations:', len(real))
 for l in real[:20]: print(l)
-os.makedirs(os.path.join(ROOT,'screenshots'),exist_ok=True)
+SD=os.path.join(ROOT,'screenshots',VAR); os.makedirs(SD,exist_ok=True)
 for f,n in zip(pngs,snaps):
-    shutil.copy(f,os.path.join(ROOT,'screenshots',n+'.png'))
+    shutil.copy(f,os.path.join(SD,n+'.png'))
+for l in out.splitlines():
+    if 'Display Format' in l or 'Bankswitch Type' in l: print('STELLA:',l.strip())
 print('asserts:',asserts)

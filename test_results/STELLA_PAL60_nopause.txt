@@ -1,0 +1,9 @@
+frames scripted: 1114 snaps: 12 expected 12
+assert/scanline violations logged: 2
+CBP[07]:    941 258 57 103 | nv-BdIZC 00 02 ff ff | f024 a9 02    lda    #$02 
+CBP[07]:    942 258 56 100 | nV-BdIZC 00 02 ff ff | f024 a9 02    lda    #$02 
+negative-control logged: True
+REAL violations: 0
+STELLA: Display Format:  PAL60
+STELLA: Bankswitch Type: 4K* (4K)
+asserts: ['select -> level 3', 'fire starts game', 'up -> lane 1', 'right -> moved right, facing right', 'left -> facing left', 'plokhish shot', 'NEGATIVE CONTROL (must be logged)', 'NOPAUSE: B/W switch does not pause', 'unpaused', 'game over', 'restart after game over', 'reset restarts', 'difficulty switches ok, still playing', 'B/W at power-on style: switch left in B/W then reset -> not paused', 'select -> title']

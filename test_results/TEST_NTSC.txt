@@ -1,0 +1,98 @@
+variant NTSC: TV=0 HZ50=0 NOPAUSE=0 lines=262
+PASS power-on seed 0: title state
+PASS power-on seed 1: title state
+PASS power-on seed 2: title state
+PASS power-on seed 3: title state
+PASS power-on seed 4: title state
+PASS power-on seed 5: title state
+PASS power-on seed 6: title state
+PASS power-on seed 7: title state
+PASS power-on: sound silent on title
+PASS fire held from power-on does not start until released
+PASS ...then release+press starts
+PASS fire press starts game
+PASS start: no shot fired by the start press
+PASS Game Select on title cycles start level 2,3,4,1,2
+PASS game starts at selected level 4
+PASS joy UP moves one lane up immediately
+PASS joy DOWN moves lanes down
+PASS joy RIGHT moves right & faces right
+PASS joy LEFT moves left & turns around (facing left)
+PASS diagonal UP+RIGHT
+PASS diagonal UP+LEFT
+PASS diagonal DOWN+RIGHT
+PASS diagonal DOWN+LEFT
+PASS left limit x=20
+PASS right limit x=60
+PASS top lane limit 0
+PASS bottom lane limit 4
+PASS held DOWN auto-repeats every 11 frames
+PASS direct UP->DOWN reversal without center responds instantly
+PASS tap-tap UP moves twice
+PASS still playing before fire tests
+PASS fire facing right launches shot right
+PASS shot travels right 4px/frame
+PASS holding fire = no autofire; shot leaves screen
+PASS fire facing left launches shot left
+PASS shot travels left
+PASS left shot disappears at left edge
+PASS second press while shot active does not restart shot
+PASS shot kills dollar: explosion + score 1 + kills 1
+PASS explosion sound (noise AUDC0=8)
+PASS dollar respawn timer set after explosion
+PASS dollar reaching house destroys it (bit3 cleared)
+PASS house destruction sound
+PASS no dollar spawns in a lane without a house
+PASS Plokhish walks to house and starts sabotage
+PASS warning beep while Plokhish sabotages
+PASS Plokhish blows up house 0 after timer
+PASS turn around + shoot kills Plokhish (+5)
+PASS Plokhish respawn timer set
+PASS 8 kills -> level up
+PASS dollar speed increases with level
+PASS level caps at 9
+PASS Left difficulty A: dollars faster
+PASS Left difficulty back to B: normal speed
+PASS Right difficulty A: sabotage 60 frames faster (=1 s)
+PASS BCD score 9998+1 = 9999
+PASS score caps at 9999
+PASS last house destroyed -> GAME OVER state
+PASS hi score saved
+PASS game over sound on channel 1
+PASS fire ignored during 2s game-over delay
+PASS game-over sound ends (silence)
+PASS fire after delay restarts game
+PASS Game Select on game over -> title
+PASS title shows hi score (sg digits nonzero)
+PASS Game Reset on title starts game
+PASS Game Reset during play restarts once (held reset no repeat loop)
+PASS held reset does not keep restarting
+PASS game over reached
+PASS Game Reset on game over restarts
+PASS Game Select during play -> title
+PASS Color->B/W switch pauses game
+PASS paused: joystick/fire/dollars frozen
+PASS paused: sound muted
+PASS paused: grayscale palette
+PASS B/W->Color resumes
+PASS resumed: dollars move again
+PASS B/W switch at power-on: title fine, not paused
+PASS B/W switch at power-on: game runs (no pause)
+PASS then flipping switch pauses (edge-triggered, 7800 pause compatible)
+PASS Reset clears pause
+PASS B/W on title: no effect
+PASS shot sound (AUDC0=4 pure tone)
+PASS sound off when no events
+PASS Plokhish walking tick sound
+PASS idle game: stack depth ok (SP>=$F8)
+PASS 3-minute idle game ends in GAME OVER by itself (dollars+Plokhish win)
+PASS idle game: every frame 262 lines
+PASS fuzz 18058 frames random input/switches: always 262 lines, 3 VSYNC, 37 VBLANK, 192 visible, 30 overscan
+PASS fuzz: object X always 0..149, lane/state valid
+PASS fuzz: no timer overrun (vblank/overscan logic fits)
+PASS fuzz: stack never reaches variables (min SP vs last var $EB)
+PASS fuzz: no CPU errors
+PASS ALL scenarios (31282 frames incl. every transition): 262 lines / 3+37+192+30, HMOVE at cycle 3, no HMxx write <24 cycles after HMOVE
+PASS ALL scenarios: no timer overrun flag
+
+95/95 passed
